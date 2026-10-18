@@ -327,6 +327,8 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
       <ul>
         <li><b>En la junta de la mañana:</b> en <i>Resumen general</i> captura fichas, mora y approvals; revisa con tus asesores quién se desembolsa hoy (📌) y qué se sube a mesa, y toca <b>🔒 Fijar compromisos</b>. Ya fijado no se baja sin dar motivo.</li>
         <li><b>Durante el día:</b> en <i>Seguimiento a Desembolsos</i> mueve cada cuenta de etapa con un toque. Solo avanza lo que de verdad ya pasó.</li>
+        <li><b>Cuenta nueva al mediodía:</b> si consultas un cliente y sale approval verde, agrégalo, súbelo a mesa o desembolsa normal. Suma al real y <u>no hay que editar el compromiso</u>; la meta es cumplir o superar lo que fijaste en la mañana.</li>
+        <li><b>Mora 8–60:</b> el botón <b>±</b> cambia el signo. <span style="color:#2f7df6;font-weight:700">Azul (−)</span> = la mora baja; <span style="color:#e5484d;font-weight:700">rojo (+)</span> = la mora sube. Se puede capturar o corregir directo, sin motivo.</li>
         <li><b>Cortes:</b> manda a GP con <b>📲 Enviar datos a GP</b> al inicio, 12 pm, 3 pm y al cierre. Con internet llega solo; si no hay señal, te abre el menú para compartirlo por WhatsApp a mano.</li>
       </ul>
       <h4>Las etapas</h4>
@@ -349,7 +351,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.8 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.9 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -359,7 +361,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.8';
+const VERSION='2.5.9';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
