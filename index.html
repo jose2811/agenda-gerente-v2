@@ -44,6 +44,7 @@ h1,h2,h3{margin:0}
 .cfg-edit select,.cfg-edit input{flex:1;min-width:110px;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:13px;color:var(--ink);background:#fff}
 .lastsend{font-size:11.5px;color:var(--muted);margin:0 2px 10px}
 .lastsend.warn{color:var(--warn);font-weight:600}
+.alarmbtn{display:block;width:100%;margin:-4px 0 10px;padding:8px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--m1);background:var(--m1-soft);border:1px dashed var(--m1);border-radius:10px;cursor:pointer}
 .tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:5px;margin-bottom:12px}
 .tab{flex:1;text-align:center;padding:9px 4px;border-radius:9px;font:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border:0;background:none}
 .tab[aria-selected="true"]{background:var(--ink);color:#fff}
@@ -216,6 +217,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     <button class="linkbtn" id="cfgBtn" type="button">editar</button>
   </div>
   <div class="lastsend" id="lastSend"></div>
+  <button type="button" class="alarmbtn" id="btnIcs">⏰ Poner recordatorios de los cortes en mi calendario</button>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-v="resumen" aria-selected="true">📋 Resumen general</button>
@@ -336,12 +338,13 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
         <li>Las cuentas no desaparecen mientras estén abiertas. Lo desembolsado y lo rechazado se queda visible en <i>Cerradas (semana)</i> hasta el lunes.</li>
         <li>📝 <b>Nota</b> guarda comentarios con fecha; no se borran. ✏️ <b>Editar</b> cambia nombre, monto, tipo o asesor.</li>
         <li>Tus datos viven en este celular. Haz una copia de vez en cuando (en <i>Mi Equipo</i> → <b>💾 Respaldo</b> → Guardar copia), y no borres los datos del navegador.</li>
+        <li>⏰ <b>Recordatorios:</b> el botón azul de arriba descarga un archivo; ábrelo y acepta para que tu calendario te avise lunes a viernes a las 11:45, 2:45 y 6:00 pm. Para quitarlos, borra esos eventos del calendario ("todos los eventos").</li>
         <li>Para probar sin ensuciar nada: no mandes a GP y listo, lo que no se envía no llega a la Consola.</li>
       </ul>
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.4.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -351,7 +354,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.4.1';
+const VERSION='2.5.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -960,6 +963,21 @@ function buildExport(full){
   data.metaSemana={lunes:mondayOf(T),meta:loadMeta(mondayOf(T)),piso:metaPiso(mondayOf(T)),asesoresElegibles:hcSemana(mondayOf(T))};
   return data;
 }
+// Recordatorios en el calendario del teléfono: eventos de lunes a viernes con alarma a la hora exacta (hora local del aparato).
+function descargarRecordatorios(){
+  const CR='\r\n', stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  const eventos=[['114500','Corte GP 12 pm — manda tu corte','Faltan 15 min para el corte de las 12.'],['144500','Corte GP 3 pm — manda tu corte','Faltan 15 min para el corte de las 3.'],['180000','Cierre GP — manda tu cierre del día','Hora de mandar el cierre del día a GP.']];
+  let o=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Agenda del Gerente 2.0//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Cortes GP'];
+  eventos.forEach((e,i)=>{
+    o.push('BEGIN:VEVENT','UID:agenda-gerente2-corte'+i+'@jose2811.github.io','DTSTAMP:'+stamp,'DTSTART:20261019T'+e[0],'DURATION:PT15M',
+      'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR','SUMMARY:'+e[1],'DESCRIPTION:'+e[2],
+      'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+e[1],'TRIGGER:PT0M','END:VALARM','END:VEVENT');
+  });
+  o.push('END:VCALENDAR');
+  const b=new Blob([o.join(CR)+CR],{type:'text/calendar;charset=utf-8'}), u=URL.createObjectURL(b), a=document.createElement('a');
+  a.href=u; a.download='Recordatorios cortes GP.ics'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(u),2000);
+  toast('Abre el archivo y acepta para agregarlos a tu calendario');
+}
 function detectCorte(){ const h=new Date().getHours(); return h<10?'inicio':h<14?'12pm':h<18?'3pm':'fin'; }
 async function enviarABuzon(data,corte){
   const body={token:BUZON_TOKEN,sucursal:data.sucursal,gerente:data.gerente,region:data.region,corte,exportedAt:data.exportedAt,data};
@@ -1048,6 +1066,7 @@ document.addEventListener('click',e=>{
     },{extra:'<label class="lbl">Meta de la semana ($)<input class="field" id="mMeta" inputmode="numeric" value="'+cur+'"></label>'});
     return;
   }
+  if(t.id==='btnIcs'){ descargarRecordatorios(); return; }
   if(t.id==='btnWa'){ showWa(); return; }
   if(t.id==='btnSend'){ enviarGP(); return; }
   if(t.id==='cfgBtn'){ cfgEditing=!cfgEditing; renderHeader(); return; }
