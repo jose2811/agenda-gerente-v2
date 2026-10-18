@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Agenda del Gerente</title>
-<meta name="theme-color" content="#1C2B39">
+<meta name="theme-color" content="#0E4A4A">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=3">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
@@ -27,7 +27,7 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
 .app{max-width:640px;margin:0 auto;padding:16px 12px 60px}
 h1,h2,h3{margin:0}
-.brand{background:var(--ink);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.brand{background:linear-gradient(135deg,#0E4A4A 0%,#12665E 100%);border-radius:var(--r);padding:16px;margin-bottom:12px;border-bottom:5px solid #3FD6B0}
 .brand .logo{display:block;height:26px;width:auto;margin:0 auto 14px}
 .btop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .brand h1{color:#fff;font-size:20px;font-weight:700;letter-spacing:-.01em}
@@ -351,7 +351,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.9 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.10 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -361,7 +361,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.9';
+const VERSION='2.5.10';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
