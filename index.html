@@ -114,6 +114,11 @@ details.add[open] .addbox{border-color:var(--m1);background:#F6FAFE}
 .tipo{font:inherit;font-size:13px;font-weight:600;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 6px;cursor:pointer}
 .tipo[aria-pressed=true]{border-color:var(--m1);background:var(--m1);color:#fff}
 .tipos.err .tipo{border-color:var(--m3)}
+.p.flash{animation:pflash 2s ease-out}
+@keyframes pflash{0%{box-shadow:0 0 0 3px var(--ok),0 10px 26px rgba(47,122,77,.38);background:var(--ok-soft)}60%{box-shadow:0 0 0 3px var(--ok),0 6px 18px rgba(47,122,77,.2);background:var(--ok-soft)}100%{box-shadow:0 0 0 0 transparent;background:var(--surface)}}
+.chip.pulse{animation:cpulse .9s ease-out 2}
+@keyframes cpulse{0%{box-shadow:0 0 0 0 rgba(30,95,168,.55)}100%{box-shadow:0 0 0 9px rgba(30,95,168,0)}}
+@media (prefers-reduced-motion:reduce){.p.flash,.chip.pulse{animation:none}}
 .addbox{background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 var(--r) var(--r);padding:10px;display:grid;gap:8px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .lbl{font-size:11.5px;color:var(--muted);display:grid;gap:3px}
@@ -300,7 +305,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </section>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.1.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.2.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -310,7 +315,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.1.1';
+const VERSION='2.2.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -649,6 +654,7 @@ function chipCount(k){
 }
 const visibleP=p=>{ const f=finOf(p); return !f||f.d>=mondayOf(todayStr()); };
 const FS=[['abiertas','Abiertas'],['Por enviar','Por enviar'],['En mesa','En mesa'],['Por firmar','Por firmar'],['cerradas','Cerradas (semana)']];
+let prevStages=null;
 function renderSeg(){
   $('#fChips').innerHTML=FS.map(f=>'<button type="button" class="chip" data-fs="'+f[0]+'" aria-pressed="'+(fStage===f[0])+'">'+f[1]+' · '+chipCount(f[0])+'</button>').join('');
   $('#fAsesor').innerHTML='<option value="">Todos los asesores</option>'+asesores.map(a=>'<option value="'+a.id+'" '+(fAs===a.id?'selected':'')+'>'+esc(a.name)+(a.activo?'':' (baja)')+'</option>').join('');
@@ -666,7 +672,25 @@ function renderSeg(){
   });
   const ord={'Por enviar':0,'En mesa':1,'Por firmar':2,'Desembolsado':3,'Rechazado':4,'Sin etapa':5};
   L.sort((a,b)=>ord[stageOf(a)]-ord[stageOf(b)]||(stN(b)||0)-(stN(a)||0)||a.name.localeCompare(b.name));
+  const oldTop={}; $$('#plist .p[data-pid]').forEach(el=>{ oldTop[el.dataset.pid]=el.getBoundingClientRect().top; });
   $('#plist').innerHTML=L.length?L.map(card).join(''):'<div class="empty">Nada en este filtro.</div>';
+  // Se nota cuando algo cambia de etapa: las tarjetas se deslizan a su nuevo lugar, la que se movió brilla un momento y aparece un aviso con su nueva etapa.
+  const now={}; pipeline.forEach(p=>{ now[p.id]=stageOf(p); });
+  const moved=prevStages?pipeline.filter(p=>prevStages[p.id]&&prevStages[p.id]!==now[p.id]):[];
+  prevStages=now;
+  const calm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!calm) $$('#plist .p[data-pid]').forEach(el=>{
+    const o=oldTop[el.dataset.pid]; if(o==null) return;
+    const d=o-el.getBoundingClientRect().top;
+    if(Math.abs(d)>2&&el.animate) el.animate([{transform:'translateY('+d+'px)'},{transform:'none'}],{duration:500,easing:'cubic-bezier(.2,.8,.2,1)'});
+  });
+  if(moved.length){
+    const m=moved[moved.length-1], st=now[m.id], el=$('#plist .p[data-pid="'+m.id+'"]');
+    if(el){ el.classList.add('flash'); try{ el.scrollIntoView({behavior:calm?'auto':'smooth',block:'nearest'}); }catch(e){} }
+    const chip=$('#fChips [data-fs="'+st+'"]')||$('#fChips [data-fs="'+(isClosed(m)?'cerradas':'abiertas')+'"]');
+    if(chip) chip.classList.add('pulse');
+    setTimeout(()=>toast('✅ '+m.name+' → '+st+(el?'':' · ya no sale en este filtro, míralo en «'+st+'»')),0);
+  }
 }
 function card(p){
   const st=stageOf(p), cl=isClosed(p), cls={'Por enviar':'s-pe','En mesa':'s-en','Por firmar':'s-pf','Desembolsado':'s-de','Rechazado':'s-re'}[st]||'s-pe';
@@ -681,7 +705,7 @@ function card(p){
   const lastN=notas.length?notas[notas.length-1]:null;
   const olderN=notas.slice(0,-1).reverse();
   const log=(p.log||[]).slice().reverse();
-  return '<div class="p" data-st="'+st+'">'
+  return '<div class="p" data-pid="'+p.id+'" data-st="'+st+'">'
     +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+(p.h.de&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
     +'<div class="pmeta"><span class="pill '+cls+'">'+st+'</span><span>'+esc(asesorName(p.asesor))+'</span><span>· '+esc(TIPOS[p.tipo]||'Nuevo')+'</span>'+(!cl&&stTxt(p)?'<span class="age a-'+lvl(p)+'">'+stTxt(p)+'</span>':'')+'</div>'
     +'<div class="hitos">'+HK.map(btn).join('')+'</div>'
