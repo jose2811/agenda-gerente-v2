@@ -344,7 +344,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.2 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.3 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -354,7 +354,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.2';
+const VERSION='2.5.3';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -527,7 +527,8 @@ function eventosHTML(){
 }
 
 /* ---------- porcentajes ---------- */
-function pctOf(r,t){ if(!t||t<=0) return null; return Math.round((r||0)/t*1000)/10; }
+function parseMora(v){ const s=String(v==null?'':v), d=s.replace(/\D/g,''); if(d==='') return null; const n=Number(d); return /\+/.test(s)?n:-n; }
+function pctOf(r,t){ if(!t) return null; if(t<0) return Math.round(Math.max(0,(r||0)/t)*1000)/10; if(t<=0) return null; return Math.round((r||0)/t*1000)/10; }
 function gapCls(r,t){ const p=pctOf(r,t); if(p===null) return 'g-none'; return p>=100?'g-ok':p>=70?'g-warn':'g-low'; }
 
 /* ---------- modal genérico ---------- */
@@ -577,13 +578,11 @@ function fijar(D){
 }
 function editarCompromiso(D){
   const day=getDay(D);
-  const campo='<label class="lbl" style="margin:10px 0">Compromiso Mora 8–60 ($)<input class="field" id="mCompM" inputmode="numeric" value="'+(day.mora860.comp==null?'':money(day.mora860.comp))+'"></label>'
-    +'<div class="sub" style="margin-bottom:8px">Al guardar, el compromiso se vuelve a tomar con lo que está marcado ahora como "Por enviar" y "Se desembolsa hoy". Queda registrado con tu motivo y GP lo ve.</div>';
+  const campo='<div class="sub" style="margin-bottom:8px">Al guardar, el compromiso se vuelve a tomar con lo que está marcado ahora como "Por enviar" y "Se desembolsa hoy". Queda registrado con tu motivo y GP lo ve.</div>';
   ask('Editar compromisos del día','Los compromisos ya estaban fijados. Cualquier cambio queda en bitácora.'+campo,'Guardar cambio',true,r=>{
     const antes=compTotals(D);
     const d2=getDay(D);
     d2.lock={at:d2.lock.at,editedAt:nowHM(),mesa:mesaProy(D,null).map(p=>p.id),des:desComp(D,null).map(p=>p.id)};
-    const nv=parseNum($('#mCompM').value); d2.mora860.comp=nv;
     saveDay(D,d2);
     addLog(D,{tipo:'editar',motivo:r,antes,despues:compTotals(D)});
     renderAll(); toast('Compromiso actualizado y registrado');
@@ -603,7 +602,7 @@ function nameList(l,pre,empty){
   if(!l.length) return '<div class="sub">'+(empty||'Nadie por ahora.')+'</div>';
   return l.map(p=>'<div class="n"><span>'+(pre?pre(p):'')+esc(p.name)+' <span class="sub">· '+esc(asesorName(p.asesor))+'</span></span><span class="m">'+money(amt(p))+'</span></div>').join('');
 }
-const inp=(k,f,v,dis,isMoney)=>'<input class="'+(isMoney?'mon':'ct')+'" data-in="'+k+'.'+f+'" inputmode="numeric" value="'+(v==null?'':(isMoney?money(v):v))+'" '+(dis?'disabled':'')+' aria-label="'+k+' '+f+'">';
+const inp=(k,f,v,dis,isMoney)=>'<input class="'+(isMoney?'mon':'ct')+'" data-in="'+k+'.'+f+'" inputmode="'+(k==='m860'?'tel':'numeric')+'" value="'+(v==null?'':(isMoney?money(v):v))+'" '+(dis?'disabled':'')+' aria-label="'+k+' '+f+'">';
 const q=l=>l.length+' × '+money(sum(l));
 
 function renderResumen(){
@@ -642,7 +641,7 @@ function renderResumen(){
   h+=row({c:'c4',id:'des',label:'💰 Desembolso',auto:true,sub:'toca para ver nombres',nums:money(real)+'<span class="sl">/</span>'+money(comp),pct:pctOf(real,comp),cls:gapCls(real,comp),
     names:nameList(sets.des,p=>p.h.de&&p.h.de.d===D?'✓ ':'· ','Nadie marcado para desembolsar.'),hint:hintDes});
   h+=row({c:'c5',id:'apr',label:'🔎 Approvals cover',sub:hc+' asesores × '+COVER_X,nums:inp('aprob','real',day.aprob)+'<span class="sl">/</span>'+cover,pct:pctOf(day.aprob,cover),cls:gapCls(day.aprob,cover)});
-  h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',sub:'en pesos',nums:inp('m860','real',day.mora860.real,false,true)+'<span class="sl">/</span>'+inp('m860','comp',day.mora860.comp,!!day.lock&&day.mora860.comp!=null,true),pct:pctOf(day.mora860.real,day.mora860.comp),cls:gapCls(day.mora860.real,day.mora860.comp)});
+  h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',sub:'baja = número normal · sube = escribe +',nums:inp('m860','real',day.mora860.real,false,true)+'<span class="sl">/</span>'+inp('m860','comp',day.mora860.comp,false,true),pct:pctOf(day.mora860.real,day.mora860.comp),cls:gapCls(day.mora860.real,day.mora860.comp)});
   $('#board').innerHTML=h;
   // mesa
   const sent=mesaReal(D), proy=sets.mesa;
@@ -1119,7 +1118,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('input',e=>{
   const t=e.target, d=t.dataset&&t.dataset.in;
   if(d){
-    const [k,f]=d.split('.'), v=parseNum(t.value), day=getDay(fecha);
+    const [k,f]=d.split('.'), v=(k==='m860'?parseMora(t.value):parseNum(t.value)), day=getDay(fecha);
     if(k==='aprob') day.aprob=v; else if(k==='m860') day.mora860[f]=v; else day[k][f]=v;
     saveDay(fecha,day);
     clearTimeout(inT); inT=setTimeout(()=>{ renderResumen(); const el=document.querySelector('[data-in="'+d+'"]'); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length); } },600);
