@@ -344,7 +344,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.2 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -354,7 +354,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.1';
+const VERSION='2.5.2';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -568,14 +568,18 @@ function dropPinFromLock(p,motivo){
 }
 function fijar(D){
   const day=getDay(D);
+  if(day.mora860.comp==null&&!fijar._ok){
+    ask('Falta el compromiso de Mora 8–60','Todavía no lo capturas. Una vez fijado, cambiarlo exige dar motivo y queda en la bitácora que ve GP. ¿Quieres fijar así o capturarlo primero?','Fijar sin él',false,()=>{ fijar._ok=true; fijar(D); fijar._ok=false; });
+    return;
+  }
   day.lock={at:nowHM(),mesa:mesaProy(D,null).map(p=>p.id),des:desComp(D,null).map(p=>p.id)};
   saveDay(D,day); renderAll(); toast('Compromisos fijados');
 }
 function editarCompromiso(D){
   const day=getDay(D);
-  const extra='<label class="lbl">Compromiso Mora 8–60 ($)<input class="field" id="mCompM" inputmode="numeric" value="'+(day.mora860.comp==null?'':money(day.mora860.comp))+'"></label>'
-    +'<div class="sub">Al guardar, el compromiso se vuelve a tomar con lo que está marcado ahora como "Por enviar" y "Se desembolsa hoy". Queda registrado con tu motivo y GP lo ve.</div>';
-  ask('Editar compromisos del día','Los compromisos ya estaban fijados. Cualquier cambio queda en bitácora.','Guardar cambio',true,r=>{
+  const campo='<label class="lbl" style="margin:10px 0">Compromiso Mora 8–60 ($)<input class="field" id="mCompM" inputmode="numeric" value="'+(day.mora860.comp==null?'':money(day.mora860.comp))+'"></label>'
+    +'<div class="sub" style="margin-bottom:8px">Al guardar, el compromiso se vuelve a tomar con lo que está marcado ahora como "Por enviar" y "Se desembolsa hoy". Queda registrado con tu motivo y GP lo ve.</div>';
+  ask('Editar compromisos del día','Los compromisos ya estaban fijados. Cualquier cambio queda en bitácora.'+campo,'Guardar cambio',true,r=>{
     const antes=compTotals(D);
     const d2=getDay(D);
     d2.lock={at:d2.lock.at,editedAt:nowHM(),mesa:mesaProy(D,null).map(p=>p.id),des:desComp(D,null).map(p=>p.id)};
@@ -583,7 +587,7 @@ function editarCompromiso(D){
     saveDay(D,d2);
     addLog(D,{tipo:'editar',motivo:r,antes,despues:compTotals(D)});
     renderAll(); toast('Compromiso actualizado y registrado');
-  },{extra});
+  });
 }
 
 /* ================= pintado: Resumen ================= */
@@ -638,7 +642,7 @@ function renderResumen(){
   h+=row({c:'c4',id:'des',label:'💰 Desembolso',auto:true,sub:'toca para ver nombres',nums:money(real)+'<span class="sl">/</span>'+money(comp),pct:pctOf(real,comp),cls:gapCls(real,comp),
     names:nameList(sets.des,p=>p.h.de&&p.h.de.d===D?'✓ ':'· ','Nadie marcado para desembolsar.'),hint:hintDes});
   h+=row({c:'c5',id:'apr',label:'🔎 Approvals cover',sub:hc+' asesores × '+COVER_X,nums:inp('aprob','real',day.aprob)+'<span class="sl">/</span>'+cover,pct:pctOf(day.aprob,cover),cls:gapCls(day.aprob,cover)});
-  h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',sub:'en pesos',nums:inp('m860','real',day.mora860.real,false,true)+'<span class="sl">/</span>'+inp('m860','comp',day.mora860.comp,!!day.lock,true),pct:pctOf(day.mora860.real,day.mora860.comp),cls:gapCls(day.mora860.real,day.mora860.comp)});
+  h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',sub:'en pesos',nums:inp('m860','real',day.mora860.real,false,true)+'<span class="sl">/</span>'+inp('m860','comp',day.mora860.comp,!!day.lock&&day.mora860.comp!=null,true),pct:pctOf(day.mora860.real,day.mora860.comp),cls:gapCls(day.mora860.real,day.mora860.comp)});
   $('#board').innerHTML=h;
   // mesa
   const sent=mesaReal(D), proy=sets.mesa;
