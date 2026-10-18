@@ -86,7 +86,7 @@ h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .nums input:disabled{opacity:.6;border-bottom-color:transparent}
 .nums input:not(:disabled){border-bottom-color:var(--ink)}
 .pct{font-family:var(--mono);font-size:12px;font-weight:600;border-radius:99px;padding:2px 8px;min-width:54px;text-align:center}
-.g-ok{background:var(--ok-soft);color:var(--ok)}.g-warn{background:var(--warn-soft);color:var(--warn)}.g-low{background:var(--bad-soft);color:var(--bad)}.g-none{background:var(--soft);color:var(--muted)}
+.g-ok{background:var(--ok-soft);color:var(--ok)}.g-warn{background:var(--warn-soft);color:var(--warn)}.g-low{background:var(--bad-soft);color:var(--bad)}.g-blue{background:#e3eefc;color:#2f7df6}.g-none{background:var(--soft);color:var(--muted)}
 .names{grid-column:1/-1;border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;display:none;font-size:12.5px}
 .names.on{display:grid;gap:3px}
 .names .n{display:flex;justify-content:space-between;gap:8px}
@@ -349,7 +349,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.6 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.7 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -359,7 +359,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.6';
+const VERSION='2.5.7';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -646,7 +646,7 @@ function renderResumen(){
   h+=row({c:'c4',id:'des',label:'💰 Desembolso',auto:true,sub:'toca para ver nombres',nums:money(real)+'<span class="sl">/</span>'+money(comp),pct:pctOf(real,comp),cls:gapCls(real,comp),
     names:'<div class="sub">Desembolsados hoy:</div>'+nameList(desReal(D),()=>'✓ ','Ninguno todavía.')+'<div class="sub" style="margin-top:6px">Falta del compromiso:</div>'+nameList(sets.des.filter(p=>!(p.h.de&&p.h.de.d===D)),()=>'· ','Todo lo comprometido ya se desembolsó.'),hint:hintDes});
   h+=row({c:'c5',id:'apr',label:'🔎 Approvals cover',sub:hc+' asesores × '+COVER_X,nums:inp('aprob','real',day.aprob)+'<span class="sl">/</span>'+cover,pct:pctOf(day.aprob,cover),cls:gapCls(day.aprob,cover)});
-  h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',nums:'<div class="ncol"><span class="nl">Real</span><div class="nin">'+inp('m860','real',day.mora860.real,false,true)+'</div></div><span class="sl">/</span><div class="ncol"><span class="nl">Compromiso</span><div class="nin">'+inp('m860','comp',day.mora860.comp,false,true)+'</div></div>',pct:pctOf(day.mora860.real,day.mora860.comp),cls:gapCls(day.mora860.real,day.mora860.comp)});
+  h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',nums:'<div class="ncol"><span class="nl">Real</span><div class="nin">'+inp('m860','real',day.mora860.real,false,true)+'</div></div><span class="sl">/</span><div class="ncol"><span class="nl">Compromiso</span><div class="nin">'+inp('m860','comp',day.mora860.comp,false,true)+'</div></div>',pct:pctOf(day.mora860.real,day.mora860.comp),cls:(day.mora860.comp>0&&day.mora860.real!=null&&day.mora860.real<=0?'g-blue':gapCls(day.mora860.real,day.mora860.comp))});
   $('#board').innerHTML=h;
   // mesa
   const sent=mesaReal(D), proy=sets.mesa;
