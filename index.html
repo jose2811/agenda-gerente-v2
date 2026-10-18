@@ -285,7 +285,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </section>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.0.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.1.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -295,7 +295,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.0.0';
+const VERSION='2.1.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -416,6 +416,9 @@ const desReal=D=>pipeline.filter(p=>p.h.de&&p.h.de.d===D);
 const rechSemana=D=>{ const mon=mondayOf(D); return pipeline.filter(p=>p.h.re&&p.h.re.d>=mon&&p.h.re.d<=D); };
 const desSemana=D=>{ const mon=mondayOf(D); return pipeline.filter(p=>p.h.de&&p.h.de.d>=mon&&p.h.de.d<=D); };
 const sum=l=>l.reduce((s,p)=>s+(p.monto||0),0);
+// Monto que de verdad se desembolsó: si mesa autorizó distinto a lo solicitado, vale el autorizado (montoAut). El compromiso y lo que se subió a mesa siguen usando lo solicitado (monto).
+const amt=p=>(p.h&&p.h.de&&p.montoAut!=null)?p.montoAut:(p.monto||0);
+const sumD=l=>l.reduce((s,p)=>s+amt(p),0);
 const byId=id=>pipeline.find(p=>p.id===id);
 function getSets(D){
   const day=getDay(D);
@@ -534,7 +537,7 @@ function row(o){
 }
 function nameList(l,pre,empty){
   if(!l.length) return '<div class="sub">'+(empty||'Nadie por ahora.')+'</div>';
-  return l.map(p=>'<div class="n"><span>'+(pre?pre(p):'')+esc(p.name)+' <span class="sub">· '+esc(asesorName(p.asesor))+'</span></span><span class="m">'+money(p.monto)+'</span></div>').join('');
+  return l.map(p=>'<div class="n"><span>'+(pre?pre(p):'')+esc(p.name)+' <span class="sub">· '+esc(asesorName(p.asesor))+'</span></span><span class="m">'+money(amt(p))+'</span></div>').join('');
 }
 const inp=(k,f,v,dis,isMoney)=>'<input class="'+(isMoney?'mon':'ct')+'" data-in="'+k+'.'+f+'" inputmode="numeric" value="'+(v==null?'':(isMoney?money(v):v))+'" '+(dis?'disabled':'')+' aria-label="'+k+' '+f+'">';
 const q=l=>l.length+' × '+money(sum(l));
@@ -555,7 +558,7 @@ function renderResumen(){
     ?'<div class="t">🔒 Compromisos fijados a las <b>'+esc(day.lock.at)+'</b>'+(nEd?' · editados '+nEd+' vez'+(nEd>1?'es':''):'')+'. Para cambiarlos hay que dar motivo.</div><button class="btn" id="btnEditComp" type="button">Editar con motivo</button>'
     :'<div class="t">Captura los compromisos de la junta y <b>fíjalos</b>: el avance del día se mide contra ellos.</div><button class="btn pri" id="btnFijar" type="button">🔒 Fijar compromisos</button>';
   // meta semanal
-  const meta=loadMeta(mon), realAcum=sum(desSemana(D)), piso=metaPiso(mon);
+  const meta=loadMeta(mon), realAcum=sumD(desSemana(D)), piso=metaPiso(mon);
   if(!meta){
     $('#metaSem').innerHTML='<h3>Meta semanal de desembolso</h3><div class="empty">Todavía no hay asesores elegibles (15+ días) — agrégalos en Mi Equipo y la meta se calcula sola.</div>';
   }else{
@@ -566,7 +569,7 @@ function renderResumen(){
       +'<div class="sub">'+(meta>piso?'meta propia, por arriba del mínimo de '+money(piso):'mínimo automático · '+hc+' asesor(es) elegibles × '+money(META_POR_ASESOR))+' · lunes a '+fdow(D)+'</div>';
   }
   // marcador
-  const dr=desReal(D), real=sum(dr), comp=sum(sets.des);
+  const dr=desReal(D), real=sumD(dr), comp=sum(sets.des);
   let hintDes='';
   if(sets.locked){ const add=desComp(D,null).filter(p=>!day.lock.des.includes(p.id)).length; if(add) hintDes='+'+add+' marcado(s) después de fijar, fuera del compromiso'; }
   let h='';
@@ -598,8 +601,8 @@ function renderResumen(){
   let t='<tr><th></th><th>A mesa<br>real / proy</th><th>Desembolso<br>real / comp</th></tr>', rN=0,rM=0,rD=0;
   for(let dd=mon;dd<=D;dd=addDays(dd,1)){
     const s=getSets(dd), mr=mesaReal(dd), dre=desReal(dd);
-    rN+=mr.length; rM+=sum(mr); rD+=sum(dre);
-    t+='<tr class="'+(dd===D?'hoy':'')+'"><td>'+DOW[new Date(dd+'T00:00:00').getDay()]+' '+fd(dd)+'</td><td>'+mr.length+'×'+kfmt(sum(mr))+' / '+s.mesa.length+'×'+kfmt(sum(s.mesa))+'</td><td>'+kfmt(sum(dre))+' / '+kfmt(sum(s.des))+'</td></tr>';
+    rN+=mr.length; rM+=sum(mr); rD+=sumD(dre);
+    t+='<tr class="'+(dd===D?'hoy':'')+'"><td>'+DOW[new Date(dd+'T00:00:00').getDay()]+' '+fd(dd)+'</td><td>'+mr.length+'×'+kfmt(sum(mr))+' / '+s.mesa.length+'×'+kfmt(sum(s.mesa))+'</td><td>'+kfmt(sumD(dre))+' / '+kfmt(sum(s.des))+'</td></tr>';
   }
   t+='<tr><td>Semana</td><td>'+rN+'×'+kfmt(rM)+'</td><td>'+kfmt(rD)+'</td></tr>';
   $('#wk').innerHTML=t;
@@ -664,7 +667,7 @@ function card(p){
   const olderN=notas.slice(0,-1).reverse();
   const log=(p.log||[]).slice().reverse();
   return '<div class="p" data-st="'+st+'">'
-    +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(p.monto)+'</span></div>'
+    +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+(p.h.de&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
     +'<div class="pmeta"><span class="pill '+cls+'">'+st+'</span><span>'+esc(asesorName(p.asesor))+'</span><span>· '+esc(TIPOS[p.tipo]||'Nuevo')+'</span>'+(!cl&&stTxt(p)?'<span class="age a-'+lvl(p)+'">'+stTxt(p)+'</span>':'')+'</div>'
     +'<div class="hitos">'+HK.map(btn).join('')+'</div>'
     +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button><button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
@@ -684,10 +687,15 @@ function mark(p,key){
     return;
   }
   if(key==='de'){
-    ask('Marcar como Desembolsado','¿Confirmas que <b>'+esc(p.name)+'</b> ya se desembolsó por <b>'+money(p.monto)+'</b>?','Sí, confirmar',false,()=>{
+    const ex='<label class="lbl">Monto desembolsado (autorizado por mesa)<input class="field" id="mDesM" inputmode="numeric" value="'+(p.montoAut!=null?p.montoAut:p.monto)+'"></label>';
+    ask('Marcar como Desembolsado','<b>'+esc(p.name)+'</b> · solicitado <b>'+money(p.monto)+'</b>. Si mesa autorizó otro monto, corrígelo aquí: el desembolso real cuenta lo que se entregó, y tu compromiso del día no se mueve.','Sí, confirmar',false,()=>{
+      const mo=parseNum($('#mDesM').value)||0;
+      if(mo<=0){ toast('Pon el monto desembolsado'); return false; }
       if(!p.h.en){ p.h.en=stamp; plog(p,'En mesa (completado al desembolsar)'); }
-      p.h.de=stamp; plog(p,'Desembolsado por '+money(p.monto)); savePipeline(); renderAll(); toast('Desembolso registrado');
-    });
+      p.h.de=stamp; p.montoAut=mo;
+      plog(p,'Desembolsado por '+money(mo)+(mo!==p.monto?' (solicitado '+money(p.monto)+')':''));
+      savePipeline(); renderAll(); toast('Desembolso registrado');
+    },{extra:ex});
     return;
   }
   if(key==='pf'&&!p.h.en){ p.h.en=stamp; plog(p,'En mesa (completado al pasar a firma)'); }
@@ -698,7 +706,7 @@ function unmark(p,key){
   const higher=['en','pf','de','re'].filter(k=>RANK[k]>RANK[key]&&p.h[k]);
   if(higher.length){ toast('Primero quita «'+LBL[higher[0]]+'»'); return; }
   ask('Quitar «'+LBL[key]+'»','Vas a desmarcar <b>'+LBL[key]+'</b> de <b>'+esc(p.name)+'</b>. Queda registrado con tu motivo.','Quitar y guardar motivo',true,r=>{
-    delete p.h[key]; if(key==='re') delete p.motivo;
+    delete p.h[key]; if(key==='re') delete p.motivo; if(key==='de') delete p.montoAut;
     plog(p,'Quitó «'+LBL[key]+'»: '+r); savePipeline(); renderAll(); toast('Desmarcado');
   });
 }
@@ -826,13 +834,13 @@ function buildWa(){
   let o='*'+(cfg.gerente||'Gerente')+'* · '+(cfg.sucursal||'Sucursal')+' — '+fdow(D)+'\n\n_*Mi compromiso y resultado de hoy es:*_\n\n';
   o+='Fichas del día: '+n(day.fichas.real)+'/'+n(day.fichas.total)+'\n';
   o+='Mora 1–7 días: '+n(day.mora17.real)+'/'+n(day.mora17.total)+'\n';
-  o+='Desembolso: '+money(sum(desReal(D)))+'/'+money(sum(s.des))+'\n';
+  o+='Desembolso: '+money(sumD(desReal(D)))+'/'+money(sum(s.des))+'\n';
   o+='Approvals: '+n(day.aprob)+'/'+(hc*COVER_X)+'\n';
   o+='Mora 8–60 días: '+money(n(day.mora860.real))+'/'+money(n(day.mora860.comp))+'\n\n';
   o+='Subió hoy a mesa: '+q(sent)+' / '+q(s.mesa)+'\n';
   o+='Por enviar: '+q(pe)+'\nEn mesa: '+q(en)+'\nPor firmar: '+q(pf)+'\nRechazados de la semana: '+q(reS)+'\n';
   const meta=loadMeta(mon);
-  if(meta){ const r=sum(desSemana(D)); o+='\nMeta semana: '+money(r)+'/'+money(meta)+' ('+Math.round(r/meta*100)+'%)'; }
+  if(meta){ const r=sumD(desSemana(D)); o+='\nMeta semana: '+money(r)+'/'+money(meta)+' ('+Math.round(r/meta*100)+'%)'; }
   return o;
 }
 function showWa(){
@@ -849,7 +857,7 @@ function derivedDay(D){
   const day=getDay(D), s=getSets(D), hc=hcSemana(mondayOf(D)), mr=mesaReal(D), dr=desReal(D);
   return {fecha:D,fichas:day.fichas,mora17:day.mora17,mora860:day.mora860,
     approvals:{real:day.aprob,total:hc*COVER_X,asesores:hc},
-    desembolso:{real:sum(dr),realN:dr.length,comp:sum(s.des),compN:s.des.length},
+    desembolso:{real:sumD(dr),realN:dr.length,comp:sum(s.des),compN:s.des.length},
     aMesa:{real:sum(mr),realN:mr.length,proy:sum(s.mesa),proyN:s.mesa.length},
     fijadoA:day.lock?day.lock.at:null,editadoA:day.lock&&day.lock.editedAt?day.lock.editedAt:null};
 }
@@ -871,7 +879,7 @@ function buildExport(full){
   });
   const pe=pipeline.filter(p=>stageOf(p)==='Por enviar'), en=pipeline.filter(p=>stageOf(p)==='En mesa'), pf=pipeline.filter(p=>stageOf(p)==='Por firmar'), reS=rechSemana(T), deS=desSemana(T);
   const qq=l=>({n:l.length,monto:sum(l)});
-  data.etapas={porEnviar:qq(pe),enMesa:qq(en),porFirmar:qq(pf),rechazadosSemana:qq(reS),desembolsadosSemana:qq(deS)};
+  data.etapas={porEnviar:qq(pe),enMesa:qq(en),porFirmar:qq(pf),rechazadosSemana:qq(reS),desembolsadosSemana:{n:deS.length,monto:sumD(deS)}};
   data.metaSemana={lunes:mondayOf(T),meta:loadMeta(mondayOf(T)),piso:metaPiso(mondayOf(T)),asesoresElegibles:hcSemana(mondayOf(T))};
   return data;
 }
