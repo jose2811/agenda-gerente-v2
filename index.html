@@ -338,13 +338,13 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
         <li>Las cuentas no desaparecen mientras estén abiertas. Lo desembolsado y lo rechazado se queda visible en <i>Cerradas (semana)</i> hasta el lunes.</li>
         <li>📝 <b>Nota</b> guarda comentarios con fecha; no se borran. ✏️ <b>Editar</b> cambia nombre, monto, tipo o asesor.</li>
         <li>Tus datos viven en este celular. Haz una copia de vez en cuando (en <i>Mi Equipo</i> → <b>💾 Respaldo</b> → Guardar copia), y no borres los datos del navegador.</li>
-        <li>⏰ <b>Recordatorios:</b> el botón azul de arriba descarga un archivo; ábrelo y acepta para que tu calendario te avise lunes a viernes a las 11:45, 2:45 y 6:00 pm. Para quitarlos, borra esos eventos del calendario ("todos los eventos").</li>
+        <li>⏰ <b>Recordatorios:</b> el botón azul de arriba descarga un archivo; ábrelo y acepta para que tu calendario te avise lunes a viernes a las 11:45, 2:45 y 6:00 pm. Salen como «Libre» y privados, así que no bloquean tu agenda. Para quitarlos, borra los 3 eventos eligiendo «toda la serie».</li>
         <li>Para probar sin ensuciar nada: no mandes a GP y listo, lo que no se envía no llega a la Consola.</li>
       </ul>
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -354,7 +354,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.0';
+const VERSION='2.5.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -970,7 +970,7 @@ function descargarRecordatorios(){
   let o=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Agenda del Gerente 2.0//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Cortes GP'];
   eventos.forEach((e,i)=>{
     o.push('BEGIN:VEVENT','UID:agenda-gerente2-corte'+i+'@jose2811.github.io','DTSTAMP:'+stamp,'DTSTART:20261019T'+e[0],'DURATION:PT15M',
-      'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR','SUMMARY:'+e[1],'DESCRIPTION:'+e[2],
+      'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR','SUMMARY:'+e[1],'DESCRIPTION:'+e[2],'TRANSP:TRANSPARENT','X-MICROSOFT-CDO-BUSYSTATUS:FREE','CLASS:PRIVATE',
       'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+e[1],'TRIGGER:PT0M','END:VALARM','END:VEVENT');
   });
   o.push('END:VCALENDAR');
