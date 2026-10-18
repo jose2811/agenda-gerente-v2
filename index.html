@@ -341,7 +341,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.4.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.4.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -351,7 +351,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.4.0';
+const VERSION='2.4.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -412,6 +412,7 @@ const MOTIVOS_RECHAZO=['Mesa rechazó por buró','Falta de capacidad de pago','P
 const LIM={'Por enviar':[1,2],'En mesa':[2,3],'Por firmar':[1,2]};   // días: ámbar / rojo
 
 /* ---------- estado ---------- */
+const REGION_DEFAULT='Jalisco';
 let cfg={gerente:'',sucursal:''};
 let asesores=[];
 let pipeline=[];
@@ -942,7 +943,7 @@ function buildExport(full){
   let dates=lsKeys('dia:').map(k=>k.slice(4)); if(!dates.includes(T)) dates.push(T);
   if(!full) dates=dates.filter(d=>d>=from);
   dates.sort();
-  const data={formato:'agenda-gerente-v2',version:VERSION,exportedAt:new Date().toISOString(),sucursal:cfg.sucursal||'',gerente:cfg.gerente||'',fechaVista:fecha,
+  const data={formato:'agenda-gerente-v2',version:VERSION,exportedAt:new Date().toISOString(),sucursal:cfg.sucursal||'',gerente:cfg.gerente||'',region:cfg.region||REGION_DEFAULT,fechaVista:fecha,
     asesores,solicitudes:full?solicitudes:solicitudes.filter(x=>x.estado!=='resuelta'||solDias(x.resueltoEn||x.creado)<=14),
     dias:{},resumenDias:{},compromisoLog:{},metas:{}};
   const pip=full?pipeline:pipeline.filter(p=>{ const f=finOf(p); return !f||f.d>=cutoff; });
@@ -961,7 +962,7 @@ function buildExport(full){
 }
 function detectCorte(){ const h=new Date().getHours(); return h<10?'inicio':h<14?'12pm':h<18?'3pm':'fin'; }
 async function enviarABuzon(data,corte){
-  const body={token:BUZON_TOKEN,sucursal:data.sucursal,gerente:data.gerente,corte,exportedAt:data.exportedAt,data};
+  const body={token:BUZON_TOKEN,sucursal:data.sucursal,gerente:data.gerente,region:data.region,corte,exportedAt:data.exportedAt,data};
   const resp=await fetch(BUZON_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
   return await resp.json();
 }
@@ -1124,6 +1125,8 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&todayStr()!==lastToday){ if(fecha===lastToday) fecha=todayStr(); lastToday=todayStr(); renderAll(); }
 });
 loadAll();
+// Región: por default Jalisco. Para otra región se comparte el link con ?region=Nombre; se guarda en este celular y viaja en cada envío.
+try{ const rp=new URLSearchParams(location.search).get('region'); if(rp&&rp.trim()){ cfg.region=rp.trim().slice(0,40); jset('config',cfg); } }catch(e){}
 cfgEditing=!(cfg.sucursal||cfg.gerente);
 renderAll();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
