@@ -351,7 +351,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.5.10 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.6.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -361,7 +361,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.5.10';
+const VERSION='2.6.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -814,10 +814,12 @@ function addNota(p){
   },{ph:'Escribe la nota'});
 }
 function editProspect(p){
+  window.__editPid=p.id;
   const opts=asesores.filter(a=>a.activo||a.id===p.asesor).map(a=>'<option value="'+a.id+'" '+(a.id===p.asesor?'selected':'')+'>'+esc(a.name)+'</option>').join('');
   const extra='<label class="lbl">Nombre<input class="field" id="eN" value="'+esc(p.name)+'"></label>'
     +'<div class="two"><label class="lbl">Monto $<input class="field" id="eM" inputmode="numeric" value="'+(p.monto||'')+'"></label><label class="lbl">Tipo<select class="field" id="eT">'+Object.keys(TIPOS).map(k=>'<option value="'+k+'" '+(p.tipo===k?'selected':'')+'>'+TIPOS[k]+'</option>').join('')+'</select></label></div>'
-    +'<label class="lbl">Asesor<select class="field" id="eA">'+opts+'</select></label>';
+    +'<label class="lbl">Asesor<select class="field" id="eA">'+opts+'</select></label>'
+    +(p.h.de||p.h.re?'<div class="sub" style="margin-top:10px">Para eliminar un duplicado, primero quita «'+(p.h.de?'Desembolsado':'Rechazado')+'».</div>':'<button type="button" class="btn" id="eDel" style="margin-top:10px;width:100%;color:#b3261e;border-color:#e5b4b0">🗑 Es duplicado o error de captura: eliminar</button>');
   ask('Editar prospecto','Si cambias el monto de algo que ya está en el compromiso del día, tienes que dar motivo.','Guardar',false,()=>{
     const nm=$('#eN').value.trim(), mo=parseNum($('#eM').value)||0, tp=$('#eT').value, as=$('#eA').value;
     if(!nm){ toast('El nombre no puede quedar vacío'); return false; }
@@ -916,6 +918,19 @@ function renderHeader(){
 }
 function renderAll(){ renderHeader(); renderResumen(); renderSol(); renderSeg(); renderEquipo(); }
 
+function eliminarProspecto(p){
+  ask('Eliminar «'+esc(p.name)+'»','Solo para <b>duplicados o errores de captura</b>. Se borra de tu pipeline y deja de contar en todo (compromiso, real, mesa). Queda en la bitácora con tu motivo y GP lo ve. Si el cliente fue rechazado de verdad, no lo borres: márcalo Rechazado.','Eliminar',true,r=>{
+    const T=todayStr(), antes=compTotals(T), st=stageOf(p);
+    pipeline=pipeline.filter(x=>x.id!==p.id);
+    const lk=getDay(T).lock;
+    if(lk){ const d2=getDay(T); d2.lock={...lk,mesa:(lk.mesa||[]).filter(i=>i!==p.id),des:(lk.des||[]).filter(i=>i!==p.id)}; saveDay(T,d2); }
+    savePipeline();
+    const el=jget('eliminados',[]); el.push({id:p.id,name:p.name,monto:p.monto,asesor:p.asesor,etapa:st,motivo:r,ts:new Date().toISOString()}); jset('eliminados',el.slice(-100));
+    addLog(T,{tipo:'eliminar',motivo:'Eliminado ('+p.name+', '+money(p.monto)+'): '+r,antes,despues:compTotals(T)});
+    renderAll(); toast('Eliminado y registrado');
+  },{quick:['Duplicado','Error de captura'],ph:'Motivo (ej. duplicado de ...)'});
+}
+
 /* ================= WhatsApp ================= */
 function buildWa(){
   const D=fecha, mon=mondayOf(D), day=getDay(D), s=getSets(D), hc=hcSemana(mon);
@@ -958,7 +973,7 @@ function buildExport(full){
   dates.sort();
   const data={formato:'agenda-gerente-v2',version:VERSION,exportedAt:new Date().toISOString(),sucursal:cfg.sucursal||'',gerente:cfg.gerente||'',region:cfg.region||REGION_DEFAULT,fechaVista:fecha,
     asesores,solicitudes:full?solicitudes:solicitudes.filter(x=>x.estado!=='resuelta'||solDias(x.resueltoEn||x.creado)<=14),
-    dias:{},resumenDias:{},compromisoLog:{},metas:{}};
+    dias:{},resumenDias:{},compromisoLog:{},metas:{},eliminados:jget('eliminados',[])};
   const pip=full?pipeline:pipeline.filter(p=>{ const f=finOf(p); return !f||f.d>=cutoff; });
   data.pipeline=full?pip:pip.map(p=>{ const c={...p}; delete c.log; return c; });
   dates.forEach(d=>{
@@ -1084,6 +1099,7 @@ document.addEventListener('click',e=>{
     $('#nTipo').value=t.dataset.t; $('#nTipos').classList.remove('err');
     $$('#nTipos .tipo').forEach(b=>b.setAttribute('aria-pressed',b===t?'true':'false')); return;
   }
+  if(t.id==='eDel'){ const pid=(window.__editPid||''); const p=byId(pid); if(p){ closeModal(); eliminarProspecto(p); } return; }
   if(t.id==='nAdd'){ addProspect(); return; }
   if(t.id==='aAdd'){ addAsesor(); return; }
   if(t.id==='btnExport'){ guardarCopia(); return; }
