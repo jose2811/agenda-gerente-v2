@@ -330,7 +330,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
         <li><b>En la junta de la mañana:</b> en <i>Resumen general</i> captura fichas, mora y approvals; revisa con tus asesores quién se desembolsa hoy (📌) y qué se sube a mesa, y toca <b>🔒 Fijar compromisos</b>. Ya fijado no se baja sin dar motivo.</li>
         <li><b>Durante el día:</b> en <i>Seguimiento a Desembolsos</i> mueve cada cuenta de etapa con un toque. Solo avanza lo que de verdad ya pasó.</li>
         <li><b>Cuenta nueva al mediodía:</b> si consultas un cliente y sale approval verde, agrégalo, súbelo a mesa o desembolsa normal. Suma al real y <u>no hay que editar el compromiso</u>; la meta es cumplir o superar lo que fijaste en la mañana.</li>
-        <li><b>Riesgo de brinco:</b> captura en pesos lo que está en 7 días de mora (lo que mañana brinca a 8–60 si no se cierra): a la izquierda lo que ya rescataste, a la derecha tu compromiso de la mañana.</li>
+        <li><b>Riesgo de brinco:</b> captura una sola vez, en pesos, lo que está en 7 días de mora: lo que brincaría a 8–60 si no se cobra. Se queda fijo todo el día; lo que pase se ve en Mora 8–60.</li>
         <li><b>Mora 8–60:</b> el botón <b>±</b> cambia el signo. <span style="color:#2f7df6;font-weight:700">Azul (−)</span> = la mora baja; <span style="color:#e5484d;font-weight:700">rojo (+)</span> = la mora sube. Se puede capturar o corregir directo, sin motivo.</li>
         <li><b>Cortes:</b> manda a GP con <b>📲 Enviar datos a GP</b> al inicio, 12 pm, 3 pm y al cierre. Con internet llega solo; si no hay señal, te abre el menú para compartirlo por WhatsApp a mano.</li>
       </ul>
@@ -354,7 +354,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.7.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.7.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -364,7 +364,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.7.0';
+const VERSION='2.7.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -450,7 +450,7 @@ function savePipeline(){ jset('pipeline',pipeline); }
 function saveAsesores(){ jset('asesores',asesores); }
 function saveSol(){ jset('solicitudes',solicitudes); }
 
-const blankDay=()=>({fichas:{real:null,total:null},mora17:{real:null,total:null},riesgo:{real:null,comp:null},mora860:{real:null,comp:null},aprob:null,lock:null});
+const blankDay=()=>({fichas:{real:null,total:null},mora17:{real:null,total:null},riesgo:{monto:null},mora860:{real:null,comp:null},aprob:null,lock:null});
 function getDay(D){
   const d=jget('dia:'+D,null); const b=blankDay();
   if(!d) return b;
@@ -604,7 +604,7 @@ function row(o){
   const open=!!openRows[o.id];
   return '<div class="row '+(o.c||'')+(o.stack?' stack':'')+'" '+(o.names?'role="button" tabindex="0" data-row="'+o.id+'"':'')+'>'
     +'<div class="lab">'+o.label+(o.auto?'<span class="auto">auto</span>':'')+(o.sub?'<small>'+o.sub+'</small>':'')+'</div>'
-    +'<div class="nums">'+o.nums+'<span class="pct '+o.cls+'">'+(o.pct==null?'—':o.pct+'%')+'</span></div>'
+    +'<div class="nums">'+o.nums+(o.pct===false?'':'<span class="pct '+o.cls+'">'+(o.pct==null?'—':o.pct+'%')+'</span>')+'</div>'
     +(o.hint?'<div class="hint '+(o.hintBad?'bad':'')+'">'+o.hint+'</div>':'')
     +(o.names?'<div class="names '+(open?'on':'')+'">'+o.names+'</div>':'')+'</div>';
 }
@@ -648,7 +648,7 @@ function renderResumen(){
   let h='';
   h+=row({c:'c1',id:'fichas',label:'📋 Fichas del día',nums:inp('fichas','real',day.fichas.real)+'<span class="sl">/</span>'+inp('fichas','total',day.fichas.total),pct:pctOf(day.fichas.real,day.fichas.total),cls:gapCls(day.fichas.real,day.fichas.total)});
   h+=row({c:'c2',id:'mora17',label:'⏳ Mora 1–7 días',nums:inp('mora17','real',day.mora17.real)+'<span class="sl">/</span>'+inp('mora17','total',day.mora17.total),pct:pctOf(day.mora17.real,day.mora17.total),cls:gapCls(day.mora17.real,day.mora17.total)});
-  h+=row({c:'c3',id:'riesgo',label:'⚠️ Riesgo de brinco',sub:'cuentas en 7 días · en pesos',nums:inp('riesgo','real',day.riesgo.real,false,true)+'<span class="sl">/</span>'+inp('riesgo','comp',day.riesgo.comp,false,true),pct:pctOf(day.riesgo.real,day.riesgo.comp),cls:gapCls(day.riesgo.real,day.riesgo.comp)});
+  h+=row({c:'c3',id:'riesgo',label:'⚠️ Riesgo de brinco',sub:'cuentas en 7 días · en pesos',nums:inp('riesgo','monto',day.riesgo.monto,false,true),pct:false});
   h+=row({c:'c4',id:'des',label:'💰 Desembolso',auto:true,sub:'toca para ver nombres',nums:money(real)+'<span class="sl">/</span>'+money(comp),pct:pctOf(real,comp),cls:gapCls(real,comp),
     names:'<div class="sub">Desembolsados hoy:</div>'+nameList(desReal(D),()=>'✓ ','Ninguno todavía.')+'<div class="sub" style="margin-top:6px">Pendiente del compromiso:</div>'+nameList(sets.des.filter(p=>!(p.h.de&&p.h.de.d===D)&&!p.h.re),()=>'· ','Nada pendiente.')+(sets.des.some(p=>p.h.re)?'<div class="sub" style="margin-top:6px">Rechazados (ya no cuentan como pendiente):</div>'+nameList(sets.des.filter(p=>p.h.re),()=>'✗ ')+sets.des.filter(p=>p.h.re&&p.motivo).map(p=>'<div class="why">'+esc(p.name)+': '+esc(p.motivo)+'</div>').join(''):''),hint:hintDes});
   h+=row({c:'c5',id:'apr',label:'🔎 Approvals cover',sub:hc+' asesores × '+COVER_X,nums:inp('aprob','real',day.aprob)+'<span class="sl">/</span>'+cover,pct:pctOf(day.aprob,cover),cls:gapCls(day.aprob,cover)});
@@ -943,7 +943,7 @@ function buildWa(){
   let o='*'+(cfg.gerente||'Gerente')+'* · '+(cfg.sucursal||'Sucursal')+' — '+fdow(D)+'\n\n_*Mi compromiso y resultado de hoy es:*_\n\n';
   o+='Fichas del día: '+n(day.fichas.real)+'/'+n(day.fichas.total)+'\n';
   o+='Mora 1–7 días: '+n(day.mora17.real)+'/'+n(day.mora17.total)+'\n';
-  o+='Riesgo de brinco: '+money(n(day.riesgo.real))+'/'+money(n(day.riesgo.comp))+'\n';
+  o+='Riesgo de brinco: '+money(n(day.riesgo.monto))+'\n';
   o+='Desembolso: '+money(sumD(desReal(D)))+'/'+money(sum(s.des))+'\n';
   o+='Approvals: '+n(day.aprob)+'/'+(hc*COVER_X)+'\n';
   o+='Mora 8–60 días: '+money(n(day.mora860.real))+'/'+money(n(day.mora860.comp))+'\n\n';
