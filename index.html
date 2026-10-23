@@ -329,6 +329,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
       <ul>
         <li><b>En la junta de la mañana:</b> en <i>Resumen general</i> captura fichas, mora y approvals; revisa con tus asesores quién se desembolsa hoy (📌) y qué se sube a mesa, y toca <b>🔒 Fijar compromisos</b>. Ya fijado no se baja sin dar motivo.</li>
         <li><b>Durante el día:</b> en <i>Seguimiento a Desembolsos</i> mueve cada cuenta de etapa con un toque. Solo avanza lo que de verdad ya pasó.</li>
+        <li><b>Cuenta que ya no sube hoy:</b> en su tarjeta (Por enviar) toca <b>⏸ No sube hoy</b> y da el motivo. Sale de lo que subirás hoy y baja tu compromiso de mesa; mañana vuelve a contar sola.</li>
         <li><b>Cuenta nueva al mediodía:</b> si consultas un cliente y sale approval verde, agrégalo, súbelo a mesa o desembolsa normal. Suma al real y <u>no hay que editar el compromiso</u>; la meta es cumplir o superar lo que fijaste en la mañana.</li>
         <li><b>Riesgo de brinco:</b> captura una sola vez, en pesos, lo que está en 7 días de mora: lo que brincaría a 8–60 si no se cobra. Se queda fijo todo el día; lo que pase se ve en Mora 8–60.</li>
         <li><b>Mora 8–60:</b> el botón <b>±</b> cambia el signo. <span style="color:#2f7df6;font-weight:700">Azul (−)</span> = la mora baja; <span style="color:#e5484d;font-weight:700">rojo (+)</span> = la mora sube. Se puede capturar o corregir directo, sin motivo.</li>
@@ -354,7 +355,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.7.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.8.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -364,7 +365,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.7.1';
+const VERSION='2.8.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -471,6 +472,7 @@ function mesaProy(D,cut){
     const pe=at(p.h.pe,D,cut); if(!pe) return false;
     const e=at(p.h.en,D,cut), f=at(finOf(p),D,cut);
     const end=e?e.d:(f?f.d:null);
+    if(p.difs&&p.difs.some(x=>x.d===D)) return false;   // aplazado ese día: no cuenta en lo proyectado
     return !end||end>=D;
   });
 }
@@ -763,7 +765,7 @@ function card(p){
     +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+(p.h.de&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
     +'<div class="pmeta"><span class="pill '+cls+'">'+st+'</span><span>'+esc(asesorName(p.asesor))+'</span><span>· '+esc(TIPOS[p.tipo]||'Nuevo')+'</span>'+(!cl&&stTxt(p)?'<span class="age a-'+lvl(p)+'">'+stTxt(p)+'</span>':'')+'</div>'
     +'<div class="hitos">'+HK.map(btn).join('')+'</div>'
-    +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button><button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
+    +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button>'+(stageOf(p)==='Por enviar'?'<button type="button" class="pin '+(isDif(p)?'on':'')+'" data-dif="'+p.id+'">⏸ '+(isDif(p)?'Aplazado hoy · volver a incluir':'No sube hoy')+'</button>':'')+'<button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
     +(lastN?'<div class="nota">📝 '+esc(lastN.x)+' <span class="d">('+fd(lastN.d)+')</span>'+(olderN.length?'<details class="hist"><summary>'+olderN.length+' nota(s) anterior(es)</summary>'+olderN.map(n=>'<div>'+fd(n.d)+' · '+esc(n.x)+'</div>').join('')+'</details>':'')+'</div>':'')
     +(p.motivo&&p.h.re?'<div class="motivo">Motivo: '+esc(p.motivo)+'</div>':'')
     +(log.length?'<details class="hist"><summary>Historial</summary>'+log.map(l=>'<div>'+fd(l.ts.slice(0,10))+' · '+esc(l.txt)+'</div>').join('')+'</details>':'')
@@ -935,6 +937,30 @@ function eliminarProspecto(p){
   },{quick:['Duplicado','Error de captura'],ph:'Motivo (ej. duplicado de ...)'});
 }
 
+const isDif=(p,D)=>!!(p.difs&&p.difs.some(x=>x.d===(D||todayStr())));
+function togglePosponer(p){
+  const T=todayStr();
+  if(isDif(p)){
+    ask('Volver a incluir hoy','<b>'+esc(p.name)+'</b> vuelve a contar en lo que subirás a mesa hoy.'+(lockedToday()?' <b>Sube tu compromiso del día.</b>':''),'Volver a incluir',true,r=>{
+      const antes=compTotals(T);
+      p.difs=(p.difs||[]).filter(x=>x.d!==T);
+      const day=getDay(T); if(day.lock&&!day.lock.mesa.includes(p.id)){ day.lock.mesa.push(p.id); saveDay(T,day); }
+      plog(p,'Volvió a incluirse hoy: '+r); savePipeline();
+      addLog(T,{tipo:'incluir',motivo:r,detalle:p.name+' · '+money(p.monto),antes,despues:compTotals(T)});
+      renderAll(); toast('Vuelve a contar hoy');
+    });
+    return;
+  }
+  ask('No sube hoy a mesa','<b>'+esc(p.name)+'</b> ('+money(p.monto)+') sale de lo que subirás hoy. Sigue en «Por enviar» y mañana vuelve a contar.'+(lockedToday()&&lockedToday().mesa.includes(p.id)?' <b>Baja tu compromiso de mesa del día.</b>':''),'Sacar de hoy',true,r=>{
+    const antes=compTotals(T);
+    (p.difs=p.difs||[]).push({d:T,t:nowHM(),motivo:r});
+    const day=getDay(T); if(day.lock&&day.lock.mesa.includes(p.id)){ day.lock.mesa=day.lock.mesa.filter(id=>id!==p.id); saveDay(T,day); }
+    plog(p,'No sube hoy a mesa: '+r); savePipeline();
+    addLog(T,{tipo:'aplazar',motivo:r,detalle:p.name+' · '+money(p.monto),antes,despues:compTotals(T)});
+    renderAll(); toast('Sacado de lo que sube hoy');
+  },{quick:['Cliente no se presentó','Falta aval / documentos','Cliente se echó para atrás','Se reagendó'],ph:'Motivo (obligatorio)'});
+}
+
 /* ================= WhatsApp ================= */
 function buildWa(){
   const D=fecha, mon=mondayOf(D), day=getDay(D), s=getSets(D), hc=hcSemana(mon);
@@ -968,7 +994,7 @@ function derivedDay(D){
   return {fecha:D,fichas:day.fichas,mora17:day.mora17,riesgo:day.riesgo,mora860:day.mora860,
     approvals:{real:day.aprob,total:hc*COVER_X,asesores:hc},
     desembolso:{real:sumD(dr),realN:dr.length,comp:sum(s.des),compN:s.des.length},
-    aMesa:{real:sum(mr),realN:mr.length,proy:sum(s.mesa),proyN:s.mesa.length},
+    aMesa:{real:sum(mr),realN:mr.length,proy:sum(s.mesa),proyN:s.mesa.length,difN:pipeline.filter(p=>isDif(p,D)).length,difMonto:sum(pipeline.filter(p=>isDif(p,D)))},
     fijadoA:day.lock?day.lock.at:null,editadoA:day.lock&&day.lock.editedAt?day.lock.editedAt:null};
 }
 function buildExport(full){
@@ -1111,6 +1137,7 @@ document.addEventListener('click',e=>{
   if(t.id==='btnImport'){ $('#impFile').click(); return; }
   const fs=t.closest('[data-fs]'); if(fs){ fStage=fs.dataset.fs; renderSeg(); return; }
   const hb=t.closest('[data-h]'); if(hb&&!hb.disabled){ const p=byId(hb.dataset.id), k=hb.dataset.h; if(p) (p.h[k]?unmark(p,k):mark(p,k)); return; }
+  const dfb=t.closest('[data-dif]'); if(dfb){ const p=byId(dfb.dataset.dif); if(p) togglePosponer(p); return; }
   const pn=t.closest('[data-pin]'); if(pn&&!pn.disabled){ const p=byId(pn.dataset.pin); if(p) togglePin(p); return; }
   const nt=t.closest('[data-nota]'); if(nt){ const p=byId(nt.dataset.nota); if(p) addNota(p); return; }
   const ed=t.closest('[data-edit]'); if(ed&&ed.tagName==='BUTTON'){ const p=byId(ed.dataset.edit); if(p) editProspect(p); return; }
