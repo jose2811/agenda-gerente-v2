@@ -355,7 +355,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.8.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.8.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -365,7 +365,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.8.0';
+const VERSION='2.8.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -417,7 +417,7 @@ function jset(k,v){ lsSet(k,JSON.stringify(v)); touch(); }
 /* ---------- constantes de negocio ---------- */
 const COVER_X=3;                 // Approvals cover: 3 por asesor elegible
 const META_POR_ASESOR=100000;    // piso semanal de desembolso por asesor elegible
-const ANTIGUEDAD_MIN=15;         // días para empezar a contar
+const ANTIGUEDAD_MIN=11;         // cuenta con MÁS de 10 días de ingreso al lunes de la semana
 const TIPOS={nuevo:'Nuevo',renovar:'Por renovar',lnr:'LNR',leaddigital:'Lead digital'};
 const HK=[['pe','Por enviar'],['en','En mesa'],['pf','Por firmar'],['de','Desembolsado'],['re','Rechazado']];
 const RANK={pe:0,en:1,pf:2,de:3,re:3};
@@ -635,7 +635,7 @@ function renderResumen(){
   // meta semanal
   const meta=loadMeta(mon), realAcum=sumD(desSemana(D)), piso=metaPiso(mon);
   if(!meta){
-    $('#metaSem').innerHTML='<h3>Meta semanal de desembolso</h3><div class="empty">Todavía no hay asesores elegibles (15+ días) — agrégalos en Mi Equipo y la meta se calcula sola.</div>';
+    $('#metaSem').innerHTML='<h3>Meta semanal de desembolso</h3><div class="empty">Todavía no hay asesores elegibles (más de 10 días) — agrégalos en Mi Equipo y la meta se calcula sola.</div>';
   }else{
     const pm=Math.min(100,Math.round(realAcum/meta*100));
     $('#metaSem').innerHTML='<h3>Meta semanal de desembolso <button class="linkbtn" id="metaEdit" type="button">editar meta</button></h3>'
@@ -874,14 +874,14 @@ function renderEquipo(){
   const ev=eventosHTML(); $('#teamBanner').style.display=ev?'':'none'; $('#teamBanner').innerHTML=ev;
   $('#hc').innerHTML='<span>Asesores que cuentan: <b>'+n+'</b> de '+act.length+'</span><span>Cover Approvals: <b>'+(n*COVER_X)+'</b></span><span>Meta semanal mín.: <b>'+money(n*META_POR_ASESOR)+'</b></span>';
   const sf=act.filter(a=>!a.fechaAlta).length;
-  $('#hcNote').textContent='Cuentan los activos con 15+ días de ingreso al lunes de la semana, sin vacaciones ni baja programada.'+(sf?' '+sf+' sin fecha de ingreso (cuentan por defecto).':'');
+  $('#hcNote').textContent='Cuentan los activos con más de 10 días de ingreso al lunes de la semana, sin vacaciones ni baja programada.'+(sf?' '+sf+' sin fecha de ingreso (cuentan por defecto).':'');
   const np=id=>pipeline.filter(p=>p.asesor===id&&!isClosed(p)).length;
   const rowA=a=>{
     const ant=a.fechaAlta?daysBetween(a.fechaAlta,mon):null; const nuevo=a.activo&&!a.ausencia&&ant!==null&&ant<ANTIGUEDAD_MIN;
     const hasP=pipeline.some(p=>p.asesor===a.id);
     return '<div class="as '+(a.activo?'':'off')+'"><div><div class="nm">'+esc(a.name)+'</div><div class="dt">'
       +(a.fechaAlta?'Ingreso '+fdy(a.fechaAlta):'Sin fecha de ingreso')+(a.fechaNacimiento?' · Cumple '+fd(a.fechaNacimiento):'')+' · '+np(a.id)+' prospecto(s) abiertos'
-      +(nuevo?' · <b style="color:var(--warn)">aún no cuenta (menos de 15 días)</b>':'')+'</div></div>'
+      +(nuevo?' · <b style="color:var(--warn)">aún no cuenta (10 días o menos)</b>':'')+'</div></div>'
       +(a.activo
         ?'<div class="acts"><select data-aus="'+a.id+'" aria-label="Ausencia de '+esc(a.name)+'"><option value="">Activo</option><option value="vacaciones" '+(a.ausencia==='vacaciones'?'selected':'')+'>Vacaciones</option><option value="baja" '+(a.ausencia==='baja'?'selected':'')+'>Baja programada</option></select><button class="btn" data-aedit="'+a.id+'" type="button">Editar</button><button class="btn bad" data-baja="'+a.id+'" type="button">Dar de baja</button></div>'
         :'<div class="acts"><button class="btn" data-react="'+a.id+'" type="button">Reactivar</button>'+(hasP?'':'<button class="btn bad" data-del="'+a.id+'" type="button">Eliminar</button>')+'</div>')+'</div>';
