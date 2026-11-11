@@ -1,13 +1,13 @@
 // Service worker de Agenda del Gerente v2. Red primero, caché como respaldo.
 // OJO: los repos de GitHub Pages de José comparten dominio, así que el nombre del caché
 // lleva prefijo propio y al limpiar solo se borran cachés con ESE prefijo.
-const CACHE_VERSION = 'v26';
+const CACHE_VERSION = 'v27';
 const PREFIX = 'agenda-gerente2-';
 const CACHE_NAME = PREFIX + CACHE_VERSION;
 const CORE_ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(CORE_ASSETS)).catch(() => {}));
+  event.waitUntil(caches.open(CACHE_NAME).then((c) => Promise.all(CORE_ASSETS.map((u) => fetch(u, {cache:'reload'}).then((r) => r.ok ? c.put(u, r) : null)))).catch(() => {}));
   self.skipWaiting();
 });
 self.addEventListener('activate', (event) => {
@@ -16,15 +16,16 @@ self.addEventListener('activate', (event) => {
       .then(() => self.clients.claim())
   );
 });
-function fetchConTimeout(req, ms = 4000){
+function fetchConTimeout(req, ms = 8000){
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => reject('timeout'), ms);
-    fetch(req).then((r) => { clearTimeout(t); resolve(r); }, (e) => { clearTimeout(t); reject(e); });
+    fetch(req.url, {cache:'no-store', credentials:'same-origin', redirect: req.redirect}).then((r) => { clearTimeout(t); resolve(r); }, (e) => { clearTimeout(t); reject(e); });
   });
 }
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (new URL(req.url).searchParams.has('chk')) return;   // revisión de versión: directo a la red, sin tocar el caché
   event.respondWith(
     fetchConTimeout(req)
       .then((resp) => { const copy = resp.clone(); caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {}); return resp; })

@@ -28,7 +28,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 .app{max-width:640px;margin:0 auto;padding:16px 12px 60px}
 h1,h2,h3{margin:0}
 .brand{position:relative;background:linear-gradient(135deg,#0E4A4A 0%,#12665E 100%);border-radius:var(--r);padding:16px;margin-bottom:12px;border-bottom:5px solid #3FD6B0}
-.vtag{position:absolute;top:7px;right:12px;font-size:10px;font-weight:600;letter-spacing:.03em;color:rgba(255,255,255,.55)}
+.vtag{padding:6px 8px;position:absolute;top:1px;right:12px;font-size:10px;font-weight:600;letter-spacing:.03em;color:rgba(255,255,255,.55)}
 .brand .logo{display:block;height:26px;width:auto;margin:0 auto 14px}
 .btop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .brand h1{color:#fff;font-size:20px;font-weight:700;letter-spacing:-.01em}
@@ -355,7 +355,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.9.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.9.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -365,7 +365,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.9.0';
+const VERSION='2.9.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1241,7 +1241,69 @@ try{ const rp=new URLSearchParams(location.search).get('region'); if(rp&&rp.trim
 cfgEditing=!(cfg.sucursal||cfg.gerente);
 { const vt=document.getElementById('vtag'); if(vt) vt.textContent='v'+VERSION; }
 renderAll();
-if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+
+  /* ===== Buscar actualización (sin romper nada si no hay red) ===== */
+  (function(){
+    const CUR = VERSION;
+    const RX = /const VERSION='([^']+)'/;
+    const PFX = 'agenda-gerente2-';
+    let ultima = 0;
+    function banner(rem){
+      if(document.getElementById('updBanner')) return;
+      const d = document.createElement('div'); d.id = 'updBanner';
+      d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:14px;z-index:99999;background:#1b2b3a;color:#fff;border-radius:12px;padding:12px 14px;font:600 14px system-ui,sans-serif;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.35)';
+      d.innerHTML = '<span style="flex:1">🔄 Hay una versión nueva ('+rem+')</span><button type="button" style="background:#2fb67c;color:#fff;border:0;border-radius:8px;padding:8px 14px;font:700 14px system-ui,sans-serif">Actualizar</button>';
+      d.querySelector('button').addEventListener('click', ()=>aplicar());
+      document.body.appendChild(d);
+    }
+    async function versionRemota(){
+      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 9000);
+      try{
+        const r = await fetch('./index.html?chk='+Date.now(), {cache:'no-store', signal:ctl.signal});
+        if(!r.ok) return null;
+        const m = RX.exec(await r.text());
+        return m ? m[1] : null;
+      }catch(e){ return null; }
+      finally{ clearTimeout(t); }
+    }
+    async function aplicar(){
+      try{ const reg = await navigator.serviceWorker.getRegistration(); if(reg) await reg.update(); }catch(e){}
+      try{ const ks = await caches.keys(); await Promise.all(ks.filter(k=>k.startsWith(PFX)).map(k=>caches.delete(k))); }catch(e){}
+      location.reload();
+    }
+    async function revisar(modo){
+      if(modo==='manual') toast('Buscando actualización…');
+      const rem = await versionRemota();
+      if(!rem){ if(modo==='manual') toast('Sin señal para revisar — sigues con '+CUR); return; }
+      if(rem===CUR){ if(modo==='manual') toast('✅ Ya tienes la última versión ('+CUR+')'); return; }
+      let ya = false; try{ ya = sessionStorage.getItem('updTry:'+rem)==='1'; }catch(e){}
+      if(modo==='manual' || (modo==='inicio' && !ya)){
+        try{ sessionStorage.setItem('updTry:'+rem,'1'); }catch(e){}
+        toast('Actualizando a '+rem+'…'); setTimeout(aplicar, 400); return;
+      }
+      banner(rem);
+    }
+    window.__buscarActualizacion = ()=>revisar('manual');
+    function conectaBotones(){
+      ['vtag'].forEach(id=>{
+        const el = document.getElementById(id); if(!el || el.dataset.upd) return;
+        el.dataset.upd = '1'; el.style.cursor = 'pointer'; el.title = 'Toca para buscar una versión nueva';
+        if(!/🔄/.test(el.textContent)) el.textContent = el.textContent + ' 🔄';
+        el.addEventListener('click', ()=>revisar('manual'));
+      });
+    }
+    setTimeout(conectaBotones, 300);
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg=>{ reg.update().catch(()=>{}); }).catch(()=>{});
+        setTimeout(()=>{ ultima = Date.now(); revisar('inicio'); }, 1500);
+      });
+    }
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState==='visible' && Date.now()-ultima > 60000){ ultima = Date.now(); revisar('foco'); }
+    });
+  })();
+
 })();
 </script>
 </body>
