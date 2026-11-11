@@ -355,7 +355,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.9.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.9.2 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -365,7 +365,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.9.1';
+const VERSION='2.9.2';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -777,8 +777,14 @@ function card(p){
 function mark(p,key){
   const T=todayStr(), stamp={d:T,t:nowHM()};
   if(key==='re'){
-    ask('Marcar como Rechazado','<b>'+esc(p.name)+'</b> ('+money(p.monto)+') queda rechazado. Anota el motivo específico. Si es un duplicado o error de captura, también se registra aquí.','Guardar rechazo',true,r=>{
-      p.h.re=stamp; p.motivo=r; plog(p,'Rechazado: '+r); savePipeline(); renderAll(); toast('Rechazado registrado');
+    ask('Marcar como Rechazado','<b>'+esc(p.name)+'</b> ('+money(p.monto)+') queda rechazado y <b>sale de tu compromiso del día</b>. Anota el motivo específico. Si es un duplicado o error de captura, también se registra aquí.','Guardar rechazo',true,r=>{
+      const antes=compTotals(T), day=getDay(T);
+      if(day.lock&&(day.lock.des.includes(p.id)||day.lock.mesa.includes(p.id))){
+        day.lock.des=day.lock.des.filter(id=>id!==p.id); day.lock.mesa=day.lock.mesa.filter(id=>id!==p.id); saveDay(T,day);
+        p.h.re=stamp; p.motivo=r; plog(p,'Rechazado: '+r);
+        addLog(T,{tipo:'rechazar',motivo:r,detalle:p.name+' · '+money(p.monto),antes,despues:compTotals(T)});
+      } else { p.h.re=stamp; p.motivo=r; plog(p,'Rechazado: '+r); }
+      savePipeline(); renderAll(); toast('Rechazado registrado');
     },{quick:MOTIVOS_RECHAZO,ph:'Motivo (obligatorio)'});
     return;
   }
