@@ -355,7 +355,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.8.2 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.9.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -365,7 +365,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.8.2';
+const VERSION='2.9.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -488,8 +488,9 @@ const desReal=D=>pipeline.filter(p=>p.h.de&&p.h.de.d===D);
 const rechSemana=D=>{ const mon=mondayOf(D); return pipeline.filter(p=>p.h.re&&p.h.re.d>=mon&&p.h.re.d<=D); };
 const desSemana=D=>{ const mon=mondayOf(D); return pipeline.filter(p=>p.h.de&&p.h.de.d>=mon&&p.h.de.d<=D); };
 const sum=l=>l.reduce((s,p)=>s+(p.monto||0),0);
-// Monto que de verdad se desembolsó: si mesa autorizó distinto a lo solicitado, vale el autorizado (montoAut). El compromiso y lo que se subió a mesa siguen usando lo solicitado (monto).
-const amt=p=>(p.h&&p.h.de&&p.montoAut!=null)?p.montoAut:(p.monto||0);
+// Monto vigente: si mesa autorizó distinto a lo solicitado (se captura al pasar a Por firmar o al desembolsar), vale el autorizado (montoAut).
+// Lo que se subió a mesa (compromiso/real de mesa) sigue usando lo solicitado (monto); el desembolso, Por firmar y el compromiso de desembolso usan el vigente.
+const amt=p=>(p.h&&(p.h.pf||p.h.de)&&p.montoAut!=null)?p.montoAut:(p.monto||0);
 const sumD=l=>l.reduce((s,p)=>s+amt(p),0);
 const byId=id=>pipeline.find(p=>p.id===id);
 function getSets(D){
@@ -566,7 +567,7 @@ function ask(title,body,label,needReason,cb,opts){
 function plog(p,txt){ (p.log=p.log||[]).push({ts:new Date().toISOString(),txt}); }
 function compTotals(D){
   const s=getSets(D); const d=getDay(D);
-  return {des:{n:s.des.length,monto:sum(s.des)},mesa:{n:s.mesa.length,monto:sum(s.mesa)},mora860:d.mora860.comp};
+  return {des:{n:s.des.length,monto:sumD(s.des)},mesa:{n:s.mesa.length,monto:sum(s.mesa)},mora860:d.mora860.comp};
 }
 function lockedToday(){ return getDay(todayStr()).lock; }
 // Quitar la marca "se desembolsa hoy" de algo que ya estaba en el compromiso fijado: baja el compromiso y queda en bitácora.
@@ -644,7 +645,7 @@ function renderResumen(){
       +'<div class="sub">'+(meta>piso?'meta propia, por arriba del mínimo de '+money(piso):'mínimo automático · '+hc+' asesor(es) elegibles × '+money(META_POR_ASESOR))+' · lunes a '+fdow(D)+'</div>';
   }
   // marcador
-  const dr=desReal(D), real=sumD(dr), comp=sum(sets.des);
+  const dr=desReal(D), real=sumD(dr), comp=sumD(sets.des);
   let hintDes='';
   if(sets.locked){ const add=desComp(D,null).filter(p=>!day.lock.des.includes(p.id)).length; if(add) hintDes='+'+add+' marcado(s) después de fijar, fuera del compromiso'; }
   let h='';
@@ -668,7 +669,7 @@ function renderResumen(){
     names:nameList(proy,p=>p.h.en&&p.h.en.d===D?'✓ ':'✗ ','Nada proyectado.')+(sentOut.length?'<div class="sub">Subieron sin estar proyectados:</div>'+nameList(sentOut,()=>'✓ '):''),hint:hintMesa});
   m+=row({c:'c0',id:'pe',label:'📤 Por enviar',sub:'esperando subirse',nums:q(pe),cls:'g-none',names:nameList(pe,p=>'<span class="sub">'+stTxt(p)+' · </span>'),hint:ageHint(pe),hintBad:true});
   m+=row({c:'c1',id:'em',label:'🏦 En mesa',sub:'total: hoy y días anteriores',nums:q(en),cls:'g-none',names:nameList(en,p=>'<span class="sub">'+stTxt(p)+' · </span>'),hint:ageHint(en),hintBad:true});
-  m+=row({c:'c2',id:'pf',label:'✍️ Por firmar',sub:'aprobados, falta firma',nums:q(pf),cls:'g-none',
+  m+=row({c:'c2',id:'pf',label:'✍️ Por firmar',sub:'aprobados, falta firma',nums:pf.length+' × '+money(sumD(pf)),cls:'g-none',
     names:nameList(pf,p=>'<span class="sub">'+stTxt(p)+' · </span>')+pf.filter(p=>p.notas&&p.notas.length).map(p=>'<div class="sub">📝 '+esc(p.name)+': '+esc(p.notas[p.notas.length-1].x)+'</div>').join(''),hint:ageHint(pf),hintBad:true});
   m+=row({c:'c3',id:'re',label:'⛔ Rechazados de la semana',sub:'acumulado lunes a '+DOW[new Date(D+'T00:00:00').getDay()],nums:q(reS),cls:'g-none',
     names:nameList(reS,()=>'')+reS.filter(p=>p.motivo).map(p=>'<div class="why">'+esc(p.name)+': '+esc(p.motivo)+'</div>').join('')});
@@ -762,10 +763,10 @@ function card(p){
   const olderN=notas.slice(0,-1).reverse();
   const log=(p.log||[]).slice().reverse();
   return '<div class="p" data-pid="'+p.id+'" data-st="'+st+'">'
-    +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+(p.h.de&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
+    +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+((p.h.de||p.h.pf)&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
     +'<div class="pmeta"><span class="pill '+cls+'">'+st+'</span><span>'+esc(asesorName(p.asesor))+'</span><span>· '+esc(TIPOS[p.tipo]||'Nuevo')+'</span>'+(!cl&&stTxt(p)?'<span class="age a-'+lvl(p)+'">'+stTxt(p)+'</span>':'')+'</div>'
     +'<div class="hitos">'+HK.map(btn).join('')+'</div>'
-    +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button>'+(stageOf(p)==='Por enviar'?'<button type="button" class="pin '+(isDif(p)?'on':'')+'" data-dif="'+p.id+'">⏸ '+(isDif(p)?'Aplazado hoy · volver a incluir':'No sube hoy')+'</button>':'')+'<button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
+    +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button>'+(stageOf(p)==='Por enviar'?'<button type="button" class="pin '+(isDif(p)?'on':'')+'" data-dif="'+p.id+'">⏸ '+(isDif(p)?'Aplazado hoy · volver a incluir':'No sube hoy')+'</button>':'')+(stageOf(p)==='Por firmar'?'<button type="button" class="pin" data-aut="'+p.id+'">💲 Monto autorizado</button>':'')+'<button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
     +(lastN?'<div class="nota">📝 '+esc(lastN.x)+' <span class="d">('+fd(lastN.d)+')</span>'+(olderN.length?'<details class="hist"><summary>'+olderN.length+' nota(s) anterior(es)</summary>'+olderN.map(n=>'<div>'+fd(n.d)+' · '+esc(n.x)+'</div>').join('')+'</details>':'')+'</div>':'')
     +(p.motivo&&p.h.re?'<div class="motivo">Motivo: '+esc(p.motivo)+'</div>':'')
     +(log.length?'<details class="hist"><summary>Historial</summary>'+log.map(l=>'<div>'+fd(l.ts.slice(0,10))+' · '+esc(l.txt)+'</div>').join('')+'</details>':'')
@@ -793,15 +794,40 @@ function mark(p,key){
     },{extra:ex});
     return;
   }
-  if(key==='pf'&&!p.h.en){ p.h.en=stamp; plog(p,'En mesa (completado al pasar a firma)'); }
+  if(key==='pf'){
+    const ex='<label class="lbl">Monto autorizado por mesa<input class="field" id="mPfM" inputmode="numeric" value="'+(p.montoAut!=null?p.montoAut:p.monto)+'"></label>';
+    ask('Pasar a Por firmar','<b>'+esc(p.name)+'</b> · solicitado <b>'+money(p.monto)+'</b>. Si mesa autorizó otro monto, corrígelo aquí: así el compromiso de desembolso de mañana no sale inflado.','Sí, pasar a firma',false,()=>{
+      const mo=parseNum($('#mPfM').value)||0;
+      if(mo<=0){ toast('Pon el monto autorizado'); return false; }
+      const T=todayStr(), antes=compTotals(T);
+      if(!p.h.en){ p.h.en=stamp; plog(p,'En mesa (completado al pasar a firma)'); }
+      p.h.pf=stamp; p.montoAut=mo;
+      plog(p,LBL.pf+(mo!==p.monto?' — autorizado '+money(mo)+' (solicitado '+money(p.monto)+')':''));
+      if(mo!==p.monto){ const despues=compTotals(T); if(antes.des.monto!==despues.des.monto) addLog(T,{tipo:'monto',motivo:'Mesa autorizó otro monto al pasar a Por firmar',detalle:p.name+': '+money(p.monto)+' → '+money(mo),antes,despues}); }
+      savePipeline(); renderAll(); toast('Por firmar registrado');
+    },{extra:ex});
+    return;
+  }
   p.h[key]=stamp; plog(p,LBL[key]); savePipeline(); renderAll();
+}
+function corregirAutorizado(p){
+  const ex='<label class="lbl">Monto autorizado por mesa<input class="field" id="mPfM" inputmode="numeric" value="'+(p.montoAut!=null?p.montoAut:p.monto)+'"></label>';
+  ask('Monto autorizado','<b>'+esc(p.name)+'</b> · solicitado <b>'+money(p.monto)+'</b>. Pon lo que mesa autorizó de verdad.','Guardar',false,()=>{
+    const mo=parseNum($('#mPfM').value)||0;
+    if(mo<=0){ toast('Pon el monto autorizado'); return false; }
+    const old=amt(p); if(mo===old){ return; }
+    const T=todayStr(), antes=compTotals(T);
+    p.montoAut=mo; plog(p,'Monto autorizado '+money(old)+' → '+money(mo));
+    const despues=compTotals(T); if(antes.des.monto!==despues.des.monto) addLog(T,{tipo:'monto',motivo:'Corrección del monto autorizado',detalle:p.name+': '+money(old)+' → '+money(mo),antes,despues});
+    savePipeline(); renderAll(); toast('Monto autorizado guardado');
+  },{extra:ex});
 }
 function unmark(p,key){
   if(key==='pe') return;
   const higher=['en','pf','de','re'].filter(k=>RANK[k]>RANK[key]&&p.h[k]);
   if(higher.length){ toast('Primero quita «'+LBL[higher[0]]+'»'); return; }
   ask('Quitar «'+LBL[key]+'»','Vas a desmarcar <b>'+LBL[key]+'</b> de <b>'+esc(p.name)+'</b>. Queda registrado con tu motivo.','Quitar y guardar motivo',true,r=>{
-    delete p.h[key]; if(key==='re') delete p.motivo; if(key==='de') delete p.montoAut;
+    delete p.h[key]; if(key==='re') delete p.motivo; if((key==='pf'&&!p.h.de)||(key==='de'&&!p.h.pf)) delete p.montoAut;
     plog(p,'Quitó «'+LBL[key]+'»: '+r); savePipeline(); renderAll(); toast('Desmarcado');
   });
 }
@@ -970,7 +996,7 @@ function buildWa(){
   o+='Fichas del día: '+n(day.fichas.real)+'/'+n(day.fichas.total)+'\n';
   o+='Mora 1–7 días: '+n(day.mora17.real)+'/'+n(day.mora17.total)+'\n';
   o+='Riesgo de brinco: '+money(n(day.riesgo.monto))+'\n';
-  o+='Desembolso: '+money(sumD(desReal(D)))+'/'+money(sum(s.des))+'\n';
+  o+='Desembolso: '+money(sumD(desReal(D)))+'/'+money(sumD(s.des))+'\n';
   o+='Approvals: '+n(day.aprob)+'/'+(hc*COVER_X)+'\n';
   o+='Mora 8–60 días: '+money(n(day.mora860.real))+'/'+money(n(day.mora860.comp))+'\n\n';
   o+='Subió hoy a mesa: '+q(sent)+' / '+q(s.mesa)+'\n';
@@ -993,7 +1019,7 @@ function derivedDay(D){
   const day=getDay(D), s=getSets(D), hc=hcSemana(mondayOf(D)), mr=mesaReal(D), dr=desReal(D);
   return {fecha:D,fichas:day.fichas,mora17:day.mora17,riesgo:day.riesgo,mora860:day.mora860,
     approvals:{real:day.aprob,total:hc*COVER_X,asesores:hc},
-    desembolso:{real:sumD(dr),realN:dr.length,comp:sum(s.des),compN:s.des.length},
+    desembolso:{real:sumD(dr),realN:dr.length,comp:sumD(s.des),compN:s.des.length},
     aMesa:{real:sum(mr),realN:mr.length,proy:sum(s.mesa),proyN:s.mesa.length,difN:pipeline.filter(p=>isDif(p,D)).length,difMonto:sum(pipeline.filter(p=>isDif(p,D)))},
     fijadoA:day.lock?day.lock.at:null,editadoA:day.lock&&day.lock.editedAt?day.lock.editedAt:null};
 }
@@ -1015,7 +1041,7 @@ function buildExport(full){
   });
   const pe=pipeline.filter(p=>stageOf(p)==='Por enviar'), en=pipeline.filter(p=>stageOf(p)==='En mesa'), pf=pipeline.filter(p=>stageOf(p)==='Por firmar'), reS=rechSemana(T), deS=desSemana(T);
   const qq=l=>({n:l.length,monto:sum(l)});
-  data.etapas={porEnviar:qq(pe),enMesa:qq(en),porFirmar:qq(pf),rechazadosSemana:qq(reS),desembolsadosSemana:{n:deS.length,monto:sumD(deS)}};
+  data.etapas={porEnviar:qq(pe),enMesa:qq(en),porFirmar:{n:pf.length,monto:sumD(pf)},rechazadosSemana:qq(reS),desembolsadosSemana:{n:deS.length,monto:sumD(deS)}};
   data.metaSemana={lunes:mondayOf(T),meta:loadMeta(mondayOf(T)),piso:metaPiso(mondayOf(T)),asesoresElegibles:hcSemana(mondayOf(T))};
   return data;
 }
@@ -1137,6 +1163,7 @@ document.addEventListener('click',e=>{
   if(t.id==='btnImport'){ $('#impFile').click(); return; }
   const fs=t.closest('[data-fs]'); if(fs){ fStage=fs.dataset.fs; renderSeg(); return; }
   const hb=t.closest('[data-h]'); if(hb&&!hb.disabled){ const p=byId(hb.dataset.id), k=hb.dataset.h; if(p) (p.h[k]?unmark(p,k):mark(p,k)); return; }
+  const aub=t.closest('[data-aut]'); if(aub){ const p=byId(aub.dataset.aut); if(p) corregirAutorizado(p); return; }
   const dfb=t.closest('[data-dif]'); if(dfb){ const p=byId(dfb.dataset.dif); if(p) togglePosponer(p); return; }
   const pn=t.closest('[data-pin]'); if(pn&&!pn.disabled){ const p=byId(pn.dataset.pin); if(p) togglePin(p); return; }
   const nt=t.closest('[data-nota]'); if(nt){ const p=byId(nt.dataset.nota); if(p) addNota(p); return; }
