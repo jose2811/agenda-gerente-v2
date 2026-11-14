@@ -141,6 +141,7 @@ details.add[open] .addbox{border-color:var(--m1);background:#F6FAFE}
 .p[data-st="En mesa"]{border-left-color:var(--m1)}.p[data-st="Por firmar"]{border-left-color:var(--m2)}
 .p[data-st="Desembolsado"]{border-left-color:var(--m4);background:var(--m4-soft)}.p[data-st="Rechazado"]{border-left-color:var(--bad);background:var(--bad-soft)}
 .ptop{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.tb{display:inline-block;min-width:17px;text-align:center;font-size:10.5px;font-weight:800;line-height:1;padding:3px 5px;border-radius:5px;color:#fff;margin-right:5px;vertical-align:1px}.tb-nuevo{background:#1E5FA8}.tb-renovar{background:#1F6F5C}.tb-lnr{background:#A1743D}.tb-leaddigital{background:#6B4FA0}
 .pname{font-weight:700;min-width:0;overflow-wrap:anywhere}
 .pmonto{font-family:var(--mono);font-weight:600;white-space:nowrap}
 .pmeta{font-size:12px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -355,7 +356,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.9.2 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.10.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -365,7 +366,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.9.2';
+const VERSION='2.10.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -419,6 +420,8 @@ const COVER_X=3;                 // Approvals cover: 3 por asesor elegible
 const META_POR_ASESOR=100000;    // piso semanal de desembolso por asesor elegible
 const ANTIGUEDAD_MIN=12;         // cuenta con 12+ días de ingreso al lunes de la semana (3er lunes)
 const TIPOS={nuevo:'Nuevo',renovar:'Por renovar',lnr:'LNR',leaddigital:'Lead digital'};
+const TLET={nuevo:'N',renovar:'R',lnr:'L',leaddigital:'D'};
+const tb=t=>{ t=TIPOS[t]?t:'nuevo'; return '<span class="tb tb-'+t+'" title="'+TIPOS[t]+'">'+TLET[t]+'</span>'; };
 const HK=[['pe','Por enviar'],['en','En mesa'],['pf','Por firmar'],['de','Desembolsado'],['re','Rechazado']];
 const RANK={pe:0,en:1,pf:2,de:3,re:3};
 const LBL=Object.fromEntries(HK);
@@ -613,7 +616,7 @@ function row(o){
 }
 function nameList(l,pre,empty){
   if(!l.length) return '<div class="sub">'+(empty||'Nadie por ahora.')+'</div>';
-  return l.map(p=>'<div class="n"><span>'+(pre?pre(p):'')+esc(p.name)+' <span class="sub">· '+esc(asesorName(p.asesor))+'</span></span><span class="m">'+money(amt(p))+'</span></div>').join('');
+  return l.map(p=>'<div class="n"><span>'+(pre?pre(p):'')+tb(p.tipo)+esc(p.name)+' <span class="sub">· '+esc(asesorName(p.asesor))+'</span></span><span class="m">'+money(amt(p))+'</span></div>').join('');
 }
 const inp=(k,f,v,dis,isMoney)=>{ const m=k==='m860', cl=(isMoney?'mon':'ct')+(m&&v!=null&&v!==0?(v<0?' neg':' pos'):''); const i='<input class="'+cl+'" data-in="'+k+'.'+f+'" inputmode="'+(m?'tel':'numeric')+'" value="'+(v==null?'':(isMoney?money(v):v))+'" '+(dis?'disabled':'')+' aria-label="'+k+' '+f+'">'; return m?'<button type="button" class="sgn" data-sign="'+f+'" aria-label="cambiar signo">±</button>'+i:i; };
 const q=l=>l.length+' × '+money(sum(l));
@@ -653,7 +656,7 @@ function renderResumen(){
   h+=row({c:'c2',id:'mora17',label:'⏳ Mora 1–7 días',nums:inp('mora17','real',day.mora17.real)+'<span class="sl">/</span>'+inp('mora17','total',day.mora17.total),pct:pctOf(day.mora17.real,day.mora17.total),cls:gapCls(day.mora17.real,day.mora17.total)});
   h+=row({c:'c3',id:'riesgo',label:'⚠️ Riesgo de brinco',sub:'cuentas en 7 días · en pesos',nums:inp('riesgo','monto',day.riesgo.monto,false,true),pct:false});
   h+=row({c:'c4',id:'des',label:'💰 Desembolso',auto:true,sub:'toca para ver nombres',nums:money(real)+'<span class="sl">/</span>'+money(comp),pct:pctOf(real,comp),cls:gapCls(real,comp),
-    names:'<div class="sub">Desembolsados hoy:</div>'+nameList(desReal(D),()=>'✓ ','Ninguno todavía.')+'<div class="sub" style="margin-top:6px">Pendiente del compromiso:</div>'+nameList(sets.des.filter(p=>!(p.h.de&&p.h.de.d===D)&&!p.h.re),()=>'· ','Nada pendiente.')+(sets.des.some(p=>p.h.re)?'<div class="sub" style="margin-top:6px">Rechazados (ya no cuentan como pendiente):</div>'+nameList(sets.des.filter(p=>p.h.re),()=>'✗ ')+sets.des.filter(p=>p.h.re&&p.motivo).map(p=>'<div class="why">'+esc(p.name)+': '+esc(p.motivo)+'</div>').join(''):''),hint:hintDes});
+    names:'<div class="sub">Desembolsados hoy:</div>'+nameList(desReal(D),()=>'✓ ','Ninguno todavía.')+'<div class="sub" style="margin-top:6px">Pendiente del compromiso:</div>'+nameList(sets.des.filter(p=>!(p.h.de&&p.h.de.d===D)&&!p.h.re),()=>'· ','Nada pendiente.')+(sets.des.some(p=>p.h.re)?'<div class="sub" style="margin-top:6px">Rechazados (ya no cuentan como pendiente):</div>'+nameList(sets.des.filter(p=>p.h.re),()=>'✗ ')+sets.des.filter(p=>p.h.re&&p.motivo).map(p=>'<div class="why">'+tb(p.tipo)+esc(p.name)+': '+esc(p.motivo)+'</div>').join(''):''),hint:hintDes});
   h+=row({c:'c5',id:'apr',label:'🔎 Approvals cover',sub:hc+' asesores × '+COVER_X,nums:inp('aprob','real',day.aprob)+'<span class="sl">/</span>'+cover,pct:pctOf(day.aprob,cover),cls:gapCls(day.aprob,cover)});
   h+=row({c:'c6',stack:true,id:'m860',label:'📉 Mora 8–60 días',nums:'<div class="ncol"><span class="nl">Real</span><div class="nin">'+inp('m860','real',day.mora860.real,false,true)+'</div></div><span class="sl">/</span><div class="ncol"><span class="nl">Compromiso</span><div class="nin">'+inp('m860','comp',day.mora860.comp,false,true)+'</div></div>',pct:pctOf(day.mora860.real,day.mora860.comp),cls:(day.mora860.comp>0&&day.mora860.real!=null&&day.mora860.real<=0?'g-blue':gapCls(day.mora860.real,day.mora860.comp))});
   $('#board').innerHTML=h;
@@ -670,9 +673,9 @@ function renderResumen(){
   m+=row({c:'c0',id:'pe',label:'📤 Por enviar',sub:'esperando subirse',nums:q(pe),cls:'g-none',names:nameList(pe,p=>'<span class="sub">'+stTxt(p)+' · </span>'),hint:ageHint(pe),hintBad:true});
   m+=row({c:'c1',id:'em',label:'🏦 En mesa',sub:'total: hoy y días anteriores',nums:q(en),cls:'g-none',names:nameList(en,p=>'<span class="sub">'+stTxt(p)+' · </span>'),hint:ageHint(en),hintBad:true});
   m+=row({c:'c2',id:'pf',label:'✍️ Por firmar',sub:'aprobados, falta firma',nums:pf.length+' × '+money(sumD(pf)),cls:'g-none',
-    names:nameList(pf,p=>'<span class="sub">'+stTxt(p)+' · </span>')+pf.filter(p=>p.notas&&p.notas.length).map(p=>'<div class="sub">📝 '+esc(p.name)+': '+esc(p.notas[p.notas.length-1].x)+'</div>').join(''),hint:ageHint(pf),hintBad:true});
+    names:nameList(pf,p=>'<span class="sub">'+stTxt(p)+' · </span>')+pf.filter(p=>p.notas&&p.notas.length).map(p=>'<div class="sub">📝 '+tb(p.tipo)+esc(p.name)+': '+esc(p.notas[p.notas.length-1].x)+'</div>').join(''),hint:ageHint(pf),hintBad:true});
   m+=row({c:'c3',id:'re',label:'⛔ Rechazados de la semana',sub:'acumulado lunes a '+DOW[new Date(D+'T00:00:00').getDay()],nums:q(reS),cls:'g-none',
-    names:nameList(reS,()=>'')+reS.filter(p=>p.motivo).map(p=>'<div class="why">'+esc(p.name)+': '+esc(p.motivo)+'</div>').join('')});
+    names:nameList(reS,()=>'')+reS.filter(p=>p.motivo).map(p=>'<div class="why">'+tb(p.tipo)+esc(p.name)+': '+esc(p.motivo)+'</div>').join('')});
   $('#mesaBoard').innerHTML=m;
   // semana
   let t='<tr><th></th><th>A mesa<br>real / proy</th><th>Desembolso<br>real / comp</th></tr>', rN=0,rM=0,rD=0;
@@ -763,7 +766,7 @@ function card(p){
   const olderN=notas.slice(0,-1).reverse();
   const log=(p.log||[]).slice().reverse();
   return '<div class="p" data-pid="'+p.id+'" data-st="'+st+'">'
-    +'<div class="ptop"><span class="pname">'+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+((p.h.de||p.h.pf)&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
+    +'<div class="ptop"><span class="pname">'+tb(p.tipo)+esc(p.name)+'</span><span class="pmonto">'+money(amt(p))+((p.h.de||p.h.pf)&&p.montoAut!=null&&p.montoAut!==p.monto?'<span class="sub" style="display:block;font-size:10px">solicitado '+money(p.monto)+'</span>':'')+'</span></div>'
     +'<div class="pmeta"><span class="pill '+cls+'">'+st+'</span><span>'+esc(asesorName(p.asesor))+'</span><span>· '+esc(TIPOS[p.tipo]||'Nuevo')+'</span>'+(!cl&&stTxt(p)?'<span class="age a-'+lvl(p)+'">'+stTxt(p)+'</span>':'')+'</div>'
     +'<div class="hitos">'+HK.map(btn).join('')+'</div>'
     +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button>'+(stageOf(p)==='Por enviar'?'<button type="button" class="pin '+(isDif(p)?'on':'')+'" data-dif="'+p.id+'">⏸ '+(isDif(p)?'Aplazado hoy · volver a incluir':'No sube hoy')+'</button>':'')+(stageOf(p)==='Por firmar'?'<button type="button" class="pin" data-aut="'+p.id+'">💲 Monto autorizado</button>':'')+'<button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
