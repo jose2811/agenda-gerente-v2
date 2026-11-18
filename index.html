@@ -44,8 +44,9 @@ h1,h2,h3{margin:0}
 .cfg-edit{display:flex;gap:6px;flex:1;flex-wrap:wrap}
 .cfg-edit select,.cfg-edit input{flex:1;min-width:110px;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:13px;color:var(--ink);background:#fff}
 .lastsend{font-size:12.5px;color:var(--muted);margin:8px 2px 0;text-align:center}
-.testbanner{background:#7c3aed;color:#fff;font-size:12px;font-weight:700;text-align:center;padding:6px 10px;border-radius:8px;margin:0 0 10px}
-.testbanner.hidden{display:none}
+#testFrame{position:fixed;inset:0;border:3px solid #7c3aed;border-radius:0;pointer-events:none;z-index:9998}
+#testTab{position:fixed;right:0;top:120px;z-index:9999;background:#7c3aed;color:#fff;font-size:11px;font-weight:800;letter-spacing:.08em;padding:6px 9px;border-radius:8px 0 0 8px;pointer-events:none;transition:top .15s ease-out;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+#testFrame.hidden,#testTab.hidden{display:none}
 .lastsend.warn{color:var(--warn);font-weight:600}
 .alarmbtn{display:block;width:100%;margin:-4px 0 10px;padding:8px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--m1);background:var(--m1-soft);border:1px dashed var(--m1);border-radius:10px;cursor:pointer}
 .tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:5px;margin-bottom:12px}
@@ -226,7 +227,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
     <button class="linkbtn" id="cfgBtn" type="button">editar</button>
   </div>
-  <div class="testbanner hidden" id="testBanner">🧪 MODO PRUEBA — lo que envíes a GP NO cuenta en el concentrado</div>
+  <div id="testFrame" class="hidden"></div><div id="testTab" class="hidden">🧪 PRUEBA</div>
   <button type="button" class="alarmbtn" id="btnIcs">⏰ Poner recordatorios de los cortes en mi calendario</button>
 
   <div class="tabs" role="tablist">
@@ -359,7 +360,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.11.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.11.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -369,7 +370,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.11.0';
+const VERSION='2.11.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -952,7 +953,9 @@ function renderHeader(){
     const s=cfg.sucursal||''; if(!s){ $('#sucSel').value=''; } else if(FIJAS.includes(s)){ $('#sucSel').value=s; $('#sucOtra').style.display='none'; } else { $('#sucSel').value='__otra__'; $('#sucOtra').style.display=''; $('#sucOtra').value=s; }
     $('#gerIn').value=cfg.gerente||'';
   }
-  $('#testBanner').classList.toggle('hidden',!/prueba|test|demo/i.test((cfg.sucursal||'')+' '+(cfg.gerente||'')));
+  const _t=/prueba|test|demo/i.test((cfg.sucursal||'')+' '+(cfg.gerente||''));
+  $('#testFrame').classList.toggle('hidden',!_t); $('#testTab').classList.toggle('hidden',!_t);
+  if(_t) posTestTab();
   const ls=jget('lastSendGP',null), el=$('#lastSend');
   if(!ls){ el.className='lastsend warn'; el.textContent='📲 Aún no has enviado ningún corte a GP.'; }
   else{
@@ -961,6 +964,12 @@ function renderHeader(){
     el.textContent='Último envío a GP: '+(hoy?'hoy':fdow(toDateStr(d)))+' '+pad(d.getHours())+':'+pad(d.getMinutes())+' · corte '+ls.corte+(hoy?'':' — hoy todavía no has enviado');
   }
 }
+function posTestTab(){
+  const t=$('#testTab'); if(!t) return;
+  const max=document.documentElement.scrollHeight-innerHeight, p=max>0?Math.min(1,scrollY/max):0;
+  t.style.top=Math.round(70+p*(innerHeight-70-60-t.offsetHeight))+'px';
+}
+addEventListener('scroll',posTestTab,{passive:true}); addEventListener('resize',posTestTab);
 function renderAll(){ renderHeader(); renderResumen(); renderSol(); renderSeg(); renderEquipo(); }
 
 function eliminarProspecto(p){
