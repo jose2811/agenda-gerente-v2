@@ -362,7 +362,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.13.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.13.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -372,7 +372,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.13.0';
+const VERSION='2.13.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -919,7 +919,7 @@ function renderEquipo(){
   const ev=eventosHTML(); $('#teamBanner').style.display=ev?'':'none'; $('#teamBanner').innerHTML=ev;
   $('#hc').innerHTML='<span>Asesores que cuentan: <b>'+n+'</b> de '+act.length+'</span><span>Meta Approvals: <b>'+(n*COVER_X)+'</b></span><span>Meta semanal mín.: <b>'+money(n*META_POR_ASESOR)+'</b></span>';
   const sf=act.filter(a=>!a.fechaAlta).length;
-  $('#hcNote').textContent='Cuentan los activos con 12+ días de ingreso al lunes (el tercer lunes ya cuentan) de la semana, sin vacaciones, incapacidad ni baja programada.'+(sf?' '+sf+' sin fecha de ingreso (cuentan por defecto).':'');
+  $('#hcNote').textContent='En vacaciones o incapacidad llena los días o la fecha de regreso (con uno basta, el otro se calcula; cuenta desde el día en que lo capturas). Cuentan los activos con 12+ días de ingreso al lunes (el tercer lunes ya cuentan) de la semana, sin vacaciones, incapacidad ni baja programada.'+(sf?' '+sf+' sin fecha de ingreso (cuentan por defecto).':'');
   const np=id=>pipeline.filter(p=>p.asesor===id&&!isClosed(p)).length;
   const rowA=a=>{
     const ant=a.fechaAlta?daysBetween(a.fechaAlta,mon):null; const nuevo=a.activo&&!a.ausencia&&ant!==null&&ant<ANTIGUEDAD_MIN;
@@ -927,9 +927,9 @@ function renderEquipo(){
     return '<div class="as '+(a.activo?'':'off')+'"><div><div class="nm">'+esc(a.name)+'</div><div class="dt">'
       +(a.fechaAlta?'Ingreso '+fdy(a.fechaAlta):'Sin fecha de ingreso')+(a.fechaNacimiento?' · Cumple '+fd(a.fechaNacimiento):'')+' · '+np(a.id)+' prospecto(s) abiertos'
       +(nuevo?' · <b style="color:var(--warn)">aún no cuenta (menos de 12 días)</b>':'')
-      +(a.activo&&a.ausencia?' · <b style="color:var(--warn)">'+({vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',baja:'📤 Baja programada'}[a.ausencia]||a.ausencia)+(a.regreso?' · regresa '+fd(a.regreso):'')+' — no cuenta en la meta</b>':'')+'</div></div>'
+      +(a.activo&&a.ausencia?' · <b style="color:var(--warn)">'+({vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',baja:'📤 Baja programada'}[a.ausencia]||a.ausencia)+(a.regreso?' · '+(a.dias?a.dias+' días · ':'')+'regresa '+fd(a.regreso):'')+' — no cuenta en la meta</b>':'')+'</div></div>'
       +(a.activo
-        ?'<div class="acts"><select data-aus="'+a.id+'" aria-label="Ausencia de '+esc(a.name)+'"><option value="">Activo</option><option value="vacaciones" '+(a.ausencia==='vacaciones'?'selected':'')+'>Vacaciones</option><option value="incapacidad" '+(a.ausencia==='incapacidad'?'selected':'')+'>Incapacidad</option><option value="baja" '+(a.ausencia==='baja'?'selected':'')+'>Baja programada</option></select>'+(a.ausencia==='vacaciones'||a.ausencia==='incapacidad'?'<label class="sub" style="display:flex;align-items:center;gap:4px">regresa <input type="date" data-reg="'+a.id+'" value="'+esc(a.regreso||'')+'" aria-label="Regresa el (opcional)"></label>':'')+'<button class="btn" data-aedit="'+a.id+'" type="button">Editar</button><button class="btn bad" data-baja="'+a.id+'" type="button">Dar de baja</button></div>'
+        ?'<div class="acts"><select data-aus="'+a.id+'" aria-label="Ausencia de '+esc(a.name)+'"><option value="">Activo</option><option value="vacaciones" '+(a.ausencia==='vacaciones'?'selected':'')+'>Vacaciones</option><option value="incapacidad" '+(a.ausencia==='incapacidad'?'selected':'')+'>Incapacidad</option><option value="baja" '+(a.ausencia==='baja'?'selected':'')+'>Baja programada</option></select>'+(a.ausencia==='vacaciones'||a.ausencia==='incapacidad'?'<label class="sub" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">días <input type="number" min="1" max="365" inputmode="numeric" data-dias="'+a.id+'" value="'+(a.dias||'')+'" style="width:56px" aria-label="Días de ausencia"> o regresa <input type="date" data-reg="'+a.id+'" value="'+esc(a.regreso||'')+'" aria-label="Regresa el (opcional)"></label>':'')+'<button class="btn" data-aedit="'+a.id+'" type="button">Editar</button><button class="btn bad" data-baja="'+a.id+'" type="button">Dar de baja</button></div>'
         :'<div class="acts"><button class="btn" data-react="'+a.id+'" type="button">Reactivar</button>'+(hasP?'':'<button class="btn bad" data-del="'+a.id+'" type="button">Eliminar</button>')+'</div>')+'</div>';
   };
   $('#asList').innerHTML=act.length||baj.length?act.map(rowA).join('')+(baj.length?'<h2>Bajas</h2>'+baj.map(rowA).join(''):''):'<div class="empty">Aún no hay asesores. Agrégalos arriba: sin ellos no se calculan el cover ni la meta semanal.</div>';
@@ -1257,8 +1257,11 @@ document.addEventListener('change',e=>{
     jset('config',cfg); $('#cfgSuc').textContent=cfg.sucursal||'Sin sucursal'; return;
   }
   if(t.id==='impFile'){ const f=t.files[0]; t.value=''; if(f) cargarCopia(f); return; }
-  if(t.dataset&&t.dataset.reg!==undefined){ const a=asesores.find(x=>x.id===t.dataset.reg); a.regreso=t.value||null; saveAsesores(); renderAll(); toast(a.regreso?'Te aviso cuando falten 2 días':'Sin fecha de regreso'); return; }
-  if(t.dataset&&t.dataset.aus!==undefined){ const a=asesores.find(x=>x.id===t.dataset.aus); a.ausencia=t.value||null; if(!a.ausencia||a.ausencia==='baja') a.regreso=null; saveAsesores(); renderAll(); toast(a.ausencia?'Fuera de la meta y el cover mientras no esté':'Vuelve a contar'); }
+  if(t.dataset&&t.dataset.dias!==undefined){ const a=asesores.find(x=>x.id===t.dataset.dias), n=parseInt(t.value,10); if(!a.desdeAus) a.desdeAus=todayStr();
+    if(n>0){ a.dias=n; a.regreso=addDays(a.desdeAus,n); } else { a.dias=null; a.regreso=null; }
+    saveAsesores(); renderAll(); toast(a.regreso?'Regresa el '+fd(a.regreso)+' — te aviso 2 días antes':'Sin fecha de regreso'); return; }
+  if(t.dataset&&t.dataset.reg!==undefined){ const a=asesores.find(x=>x.id===t.dataset.reg); if(!a.desdeAus) a.desdeAus=todayStr(); a.regreso=t.value||null; a.dias=a.regreso?Math.max(1,daysBetween(a.desdeAus,a.regreso)):null; saveAsesores(); renderAll(); toast(a.regreso?'Te aviso cuando falten 2 días':'Sin fecha de regreso'); return; }
+  if(t.dataset&&t.dataset.aus!==undefined){ const a=asesores.find(x=>x.id===t.dataset.aus); a.ausencia=t.value||null; if(!a.ausencia||a.ausencia==='baja'){ a.regreso=null; a.dias=null; a.desdeAus=null; } else if(!a.desdeAus) a.desdeAus=todayStr(); saveAsesores(); renderAll(); toast(a.ausencia?'Fuera de la meta y el cover mientras no esté':'Vuelve a contar'); }
 });
 
 /* ================= arranque ================= */
