@@ -1,10 +1,10 @@
 // Service worker de Agenda del Gerente v2. Red primero, caché como respaldo.
 // OJO: los repos de GitHub Pages de José comparten dominio, así que el nombre del caché
 // lleva prefijo propio y al limpiar solo se borran cachés con ESE prefijo.
-const CACHE_VERSION = 'v35';
+const CACHE_VERSION = 'v36';
 const PREFIX = 'agenda-gerente2-';
 const CACHE_NAME = PREFIX + CACHE_VERSION;
-const CORE_ASSETS = ['./', './index.html', './manifest.json'];
+const CORE_ASSETS = ['./', './index.html', './manifest.json', './xlsx.mini.min.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((c) => Promise.all(CORE_ASSETS.map((u) => fetch(u, {cache:'reload'}).then((r) => r.ok ? c.put(u, r) : null)))).catch(() => {}));

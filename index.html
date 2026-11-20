@@ -231,6 +231,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
   <div id="testFrame" class="hidden"></div><div id="testTab" class="hidden">🧪 PRUEBA</div>
   <div class="lastsend top" id="lastSendTop"></div>
   <button type="button" class="alarmbtn" id="btnIcs">⏰ Poner recordatorios de los cortes en mi calendario</button>
+  <button type="button" id="rnvOpen" style="width:100%;padding:12px;border:0;border-radius:10px;background:#B4571F;color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin:0 0 10px">🔁 Renovaciones</button>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-v="resumen" aria-selected="true">📋 Resumen general</button>
@@ -362,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.13.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.14.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -372,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.13.1';
+const VERSION='2.14.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1338,6 +1339,319 @@ renderAll();
     });
   })();
 
+})();
+</script>
+<!-- ===== Renovaciones del gerente (generado desde la Consola GP) — todo local: la cartera vive en IndexedDB de este navegador, nunca sale ===== -->
+<style>
+#rnvOpenX{width:100%;padding:12px;border:0;border-radius:10px;background:#B4571F;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+#rnvPanel{display:none;position:fixed;inset:0;z-index:9000;background:var(--bg,#f4f5f2);overflow:auto;-webkit-overflow-scrolling:touch}
+#rnvPanel.on{display:block}
+.rnv a.dl{color:#1c2430;font-weight:700;text-decoration:underline dotted;cursor:pointer}
+.rnv{max-width:980px;margin:0 auto;padding:14px 14px 60px;font-size:13px;color:var(--ink,#1c2430)}
+.rnv h2{margin:0;font-size:18px}.rnv .rsub{color:var(--muted,#6b7480);font-size:11.5px}
+.rnv .rbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.rnv button,.rnv select,.rnv input{font:inherit}
+.rnv .b{border:1px solid #cfd5dc;background:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;font-weight:600}
+.rnv .b.pri{background:#1F6F5C;border-color:#1F6F5C;color:#fff}
+.rnv .b.on{background:#1c2430;color:#fff;border-color:#1c2430}
+.rnv .in{border:1px solid #cfd5dc;border-radius:9px;padding:7px 9px;background:#fff}
+.rnv .rcard{background:#fff;border:1px solid #e1e5ea;border-radius:12px;padding:12px;margin:10px 0}
+.rnv .big{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.rnv .big .n{font-size:34px;font-weight:800;line-height:1}.rnv .big .l{font-size:11px;color:#6b7480}
+.rnv table{width:100%;border-collapse:collapse;font-size:12.5px}
+.rnv th{font-size:10.5px;text-transform:uppercase;color:#6b7480;text-align:center;padding:4px 6px;border-bottom:1px solid #e1e5ea}
+.rnv td{padding:6px;text-align:center;border-bottom:1px solid #f0f2f4}.rnv th:first-child,.rnv td:first-child{text-align:left}
+.rnv td.rp{font-weight:800}
+.rnv th.pr{color:#B4571F;background:#fdf3ec}.rnv td.pr{font-size:16px;font-weight:800;color:#B4571F;background:#fdf3ec}.rnv td.pr a.dl{color:#B4571F}
+.rnv .bd{display:inline-block;font-size:10.5px;font-weight:800;border-radius:99px;padding:2px 8px;color:#fff}
+.rnv .bd.ren{background:#1F6F5C}.rnv .bd.pend{background:#b7791f}.rnv .bd.no{background:#c0392b}.rnv .bd.lnr{background:#6b4fa0}.rnv .bd.leg{background:#4a5260}.rnv .bd.adel{background:#2f9e7a}
+.rnv .rrow{background:#fff;border:1px solid #e1e5ea;border-left:4px solid #b7791f;border-radius:10px;padding:9px 11px;margin:7px 0;cursor:pointer}
+.rnv .rrow.flash{position:relative;z-index:2;animation:rnvFlash 1.6s ease-out}@keyframes rnvFlash{0%{background:#fff3b0;box-shadow:0 0 0 3px #f2c94c}100%{background:#fff;box-shadow:none}}
+.rnv .rrow.ren{border-left-color:#1F6F5C}.rnv .rrow.no{border-left-color:#c0392b}.rnv .rrow.lnr{border-left-color:#6b4fa0}.rnv .rrow.adel{border-left-color:#2f9e7a}
+.rnv .rrow .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.rnv .det{margin-top:8px;border-top:1px dashed #d9dde2;padding-top:8px;cursor:default}
+.rnv .det div{margin:3px 0}.rnv .warn{color:#c0392b;font-weight:700}
+.rnv .gc{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;padding:2px 8px;background:#e8f3ee;color:#1F6F5C}.rnv .gc.g-espera{background:#fdf3dc;color:#8a5a00}.rnv .gc.g-prox{background:#e3edf8;color:#1E5FA8}.rnv .gc.g-visita{background:#efe6fb;color:#6b3fb0}.rnv .gc.g-no{background:#fbe6e3;color:#c0392b}.rnv .gc.g-fc{background:#eef0f3;color:#1c2430}.rnv .rrow.cv{border-left-color:#c0392b;background:#fff8f7}.rnv .lastnote{margin-top:5px;font-size:13px}
+.rnv .cm{background:#f6f7f9;border-radius:8px;padding:5px 8px;margin:4px 0;font-size:12px}
+.rnv .cp{width:62px;text-align:right}
+</style>
+<div id="rnvPanel"><div class="rnv" id="rnvRoot"></div></div>
+<input type="file" id="rnvFile" accept=".xlsx,.xls,.csv" style="display:none">
+<input type="file" id="rnvImp" accept=".json,application/json" style="display:none">
+<script>
+(function(){
+'use strict';
+const LS='gerente2:renov:', $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money=n=>'$'+Math.round(n||0).toLocaleString('es-MX');
+const pct=(a,b)=>b>0?Math.round(a*1000/b)/10:null, pf=v=>v==null?'—':v+'%';
+const jget=(k,d)=>{try{const v=localStorage.getItem(LS+k);return v?JSON.parse(v):d}catch(e){return d}};
+const jset=(k,v)=>{try{localStorage.setItem(LS+k,JSON.stringify(v))}catch(e){}};
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('agenda-gerente-cartera',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbGet(k){const db=await idb();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+async function idbSet(k,v){const db=await idb();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
+async function idbDel(k){const db=await idb();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
+
+const MOTIVOS=['No quiso renovar','Mora/Buró/Atrasos constantes','Rechazado desde Approval','Rechazado por mesa','Sin negocio','Sin inventario','No localizado','Fraude','Prestanombres','Se va a legal (llega a 61 días este mes)','Otro'];
+const AUTOR='Gerente', GER=true; // en la agenda del gerente: AUTOR='Gerente', GER=true
+const tsOfM=m=>{ m=m||{}; return m.ts||(m.com&&m.com.length?(Date.parse(m.com[m.com.length-1].d+'T12:00:00')||1):(m.g?1:0)); };
+const tsOf=id=>tsOfM(marks[id]);
+const FIELDS={ // campo: [etiqueta, alias normalizados, requerido]
+  id:['ID crédito',['saficreditoid','creditoid','idcredito','nocredito','credito'],1],
+  cid:['ID cliente',['safiClienteID','clienteid','idcliente','nocliente'],1],
+  cl:['Cliente',['cliente','nombrecliente','nombre'],1],
+  ci:['Ciclo',['ciclo'],0], mo:['Monto',['montodesembolso','monto'],0],
+  ini:['Fecha inicio',['fechainicio','fechadesembolso','inicio'],1],
+  fin:['Fecha fin',['fechafin','fechavencimiento','vencimiento'],1],
+  suc:['Sucursal',['sucursalgestion','sucursal','oficina'],1],
+  as:['Asesor',['asesorgestion','asesor'],0],
+  tel:['Teléfono',['telefono','tel','celular'],0],
+  st:['Estatus',['estatuscredito','estatus','estado'],1],
+  at:['Días atraso',['diasatraso','diasdeatraso','atraso'],0],
+  up:['Fecha último pago',['fechaultimopago','ultimopago'],0],
+  neg:['Dirección negocio',['negociodireccion','direccionnegocio','negocio'],0],
+  dom:['Domicilio',['domicilio','direcciondomicilio','direccion'],0]};
+FIELDS.cid[1]=FIELDS.cid[1].map(norm);
+function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');}
+function iso(v){ if(v==null||v==='') return null;
+  if(typeof v==='number'&&v>20000&&v<80000) return new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10);
+  const s=String(v); let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'); return null; }
+const dd=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+const sucName=s=>String(s||'').replace(/^CI-?/i,'').trim();
+function gerOf(suc){ return ''; }
+const dl=(st,k,n)=>n?'<a href="#" class="dl" data-dr="'+st+'" data-k="'+esc(k)+'">'+n+'</a>':n;
+const fdate=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(2,4):'—';
+
+let cart=null, marks=jget('marks',{}), comp=jget('comp',{}), cortes=jget('cortes',{}), cfg=jget('cfg',{adv:90});
+let view={pick:null,mot:'',flash:null,as:'',month:today().slice(0,7),filter:'por',suc:'',q:'',open:null,map:null,msg:'',by:GER?'as':'suc'};
+
+/* ---------- carga ---------- */
+function loadLib(){return new Promise((res,rej)=>{ if(window.XLSX) return res(); const s=document.createElement('script'); s.src='xlsx.mini.min.js'; s.onload=()=>res(); s.onerror=()=>rej(new Error('No se pudo cargar el lector de Excel (necesita abrir la consola una vez con internet).')); document.head.appendChild(s); });}
+function readSheet(buf){ const wb=XLSX.read(buf,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]]; return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); }
+function parseAOA(aoa,pending){
+  let hi=-1; for(let i=0;i<Math.min(15,aoa.length);i++){ const n=(aoa[i]||[]).map(norm); if(n.includes('cliente')&&n.filter(Boolean).length>=6){hi=i;break;} }
+  if(hi<0) return {err:'No encontré la fila de encabezados (busco una fila con "Cliente" y varias columnas).'};
+  const heads=(aoa[hi]||[]).map(h=>h==null?'':String(h)), nh=heads.map(norm), saved=jget('map',{}), colOf={}, missing=[];
+  Object.keys(FIELDS).forEach(f=>{
+    let i=-1; if(pending&&pending[f]!=null) i=+pending[f];
+    else if(saved[f]) i=nh.indexOf(saved[f]);
+    if(i<0) for(const a of FIELDS[f][1]){ i=nh.indexOf(norm(a)); if(i>=0) break; }
+    if(i>=0) colOf[f]=i; else if(FIELDS[f][2]) missing.push(f); });
+  if(missing.length) return {missing,heads,aoa};
+  const rows=[]; for(let r=hi+1;r<aoa.length;r++){ const x=aoa[r]; if(!x) continue;
+    const g=f=>colOf[f]==null?null:x[colOf[f]]; const id=String(g('id')==null?'':g('id')).trim(), cid=String(g('cid')==null?'':g('cid')).trim();
+    if(!/^\d+$/.test(id)||!/^\d+$/.test(cid)) continue; // ignora Total / leyendas
+    rows.push({id,cid,cl:String(g('cl')||''),ci:+g('ci')||null,mo:+g('mo')||0,ini:iso(g('ini')),fin:iso(g('fin')),suc:sucName(g('suc')),as:String(g('as')||''),tel:String(g('tel')||''),st:String(g('st')||''),at:+g('at')||0,up:iso(g('up')),neg:String(g('neg')||''),dom:String(g('dom')||'')}); }
+  const map={}; Object.keys(colOf).forEach(f=>map[f]=nh[colOf[f]]); jset('map',map);
+  return {rows};
+}
+async function onFile(file){
+  try{ view.msg='Leyendo…'; draw(); await loadLib(); const buf=await file.arrayBuffer(); const aoa=readSheet(buf);
+    const r=parseAOA(aoa); if(r.err){view.msg=r.err;draw();return;}
+    if(r.missing){ view.map={...r,name:file.name}; view.msg=''; draw(); return; }
+    await finish(r.rows,file.name);
+  }catch(e){ view.msg='Error: '+e.message; draw(); }
+}
+const myOffice=()=>{ try{ return JSON.parse(localStorage.getItem('gerente2:config')||'{}').sucursal||''; }catch(e){ return ''; } };
+async function finish(rows,name,keepOffs){
+  // En la agenda del gerente solo se guarda SU oficina: lo demás del archivo se descarta antes de guardar.
+  if(GER){ const offs=[...new Set(rows.map(r=>r.suc))];
+    if(offs.length>1){ const k=norm(myOffice()).slice(0,4), mine=keepOffs||offs.filter(o=>k&&norm(o).slice(0,4)===k);
+      if(!mine.length){ view.pick={rows,name,offs:offs.sort()}; view.msg=''; draw(); return; }
+      const before=rows.length; rows=rows.filter(r=>mine.includes(r.suc)); view.pick=null; view.dropped=before-rows.length; } }
+  cart={rows,meta:{name,at:new Date().toISOString(),n:rows.length}}; await idbSet('cartera',cart); view.map=null;
+  const mes=today().slice(0,7), a=analyze(mes); cortes[mes]=cortes[mes]||{}; cortes[mes][today()]=a.snap; jset('cortes',cortes);
+  const months=monthsList(); if(!months.includes(view.month)) view.month=months.includes(mes)?mes:months[0]||mes;
+  view.msg='Cartera cargada: '+rows.length.toLocaleString('es-MX')+' créditos'+(GER&&view.dropped?' de tu oficina ('+view.dropped.toLocaleString('es-MX')+' de otras oficinas se ignoraron y no se guardaron)':'')+'.'; draw();
+}
+
+/* ---------- análisis ---------- */
+function monthsList(){ if(!cart) return []; const s=new Set(); cart.rows.forEach(r=>{ if(r.fin) s.add(r.fin.slice(0,7)); }); return [...s].sort(); }
+function analyze(month){
+  const rows=cart.rows, byC={}; rows.forEach(r=>(byC[r.cid]=byC[r.cid]||[]).push(r));
+  Object.values(byC).forEach(l=>l.sort((a,b)=>(a.ini||'').localeCompare(b.ini||'')||(a.ci||0)-(b.ci||0)));
+  const ms=month+'-01', items=[];
+  const arr=[], leg=[], fd=(()=>{ const d=new Date((cart.meta&&cart.meta.at)||Date.now()); return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10); })(), trans=Math.max(0,dd(ms,fd));
+  rows.forEach(r=>{ if(!r.fin) return; const rm=r.fin.slice(0,7); if(rm!==month&&!(rm<month&&marks[r.id]&&marks[r.id].g&&marks[r.id].g!=='no')) return;
+    const l=byC[r.cid], nx=l[l.indexOf(r)+1]||null, pagado=/pagad/i.test(r.st), liq=pagado?r.up:null;
+    const renew=!!nx, adel=renew&&((nx.ini<ms)||(liq&&liq<ms)); // renovó = tiene un crédito posterior; adelantado = liquidó o renovó antes de que empezara el mes
+    const m=marks[r.id]||{}, g=m.g||(m.no?'no':''), td=today();
+    const cp=!renew&&(g==='tiempo'||g==='si'), cvenc=!renew&&!!g&&g!=='no'&&!!m.fc&&m.fc<td;
+    const it={...r,renew,adel,nx,liq,hist:l,g,fc:m.fc||'',cp,cvenc,est:renew?(adel?'adel':'ren'):(g==='no'?'no':(pagado?'lnr':'pend'))};
+    // En legal: a los 61+ días de atraso ya no es cartera de gestión. Se estima el atraso AL INICIO del mes
+    // (atraso del archivo − días transcurridos desde el 1°); si llegó a 61 durante el mes, sigue contando.
+    const at0=(r.at||0)-trans; it.at0=at0;
+    if(!renew&&r.fin.slice(0,7)===month&&(at0>=61||/castigad/i.test(r.st))){ it.leg=true; it.est='leg'; it.cp=false; it.cvenc=false; leg.push(it); return; }
+    if(r.fin.slice(0,7)!==month){ it.arr=true; it.cp=false; arr.push(it); } else items.push(it); });
+  const Z=()=>({base:0,ren:0,adel:0,pt:0,lnr:0,no:0,por:0,cp:0,cv:0,monto:0}), add=(s,i)=>{ if(i.cp) s.cp++; if(i.cvenc) s.cv++; s.base++; s.monto+=i.mo; if(i.renew){ s.ren++; if(i.adel) s.adel++; } else { s.pt++; if(i.est==='no') s.no++; else { s.por++; if(i.est==='lnr') s.lnr++; } } };
+  const sucs={}; items.forEach(i=>add(sucs[i.suc]=sucs[i.suc]||Z(),i));
+  const tot=Z(); items.forEach(i=>add(tot,i));
+  const snap={}; Object.entries(sucs).forEach(([k,s])=>snap[k]={b:s.base,r:s.ren,a:s.adel}); snap['*']={b:tot.base,r:tot.ren,a:tot.adel};
+  return {items,arr,leg,sucs,tot,snap};
+}
+
+/* ---------- pantalla ---------- */
+const Z0=()=>({base:0,ren:0,adel:0,pt:0,lnr:0,no:0,por:0,cp:0,cv:0});
+const mname=m=>{const n=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];return n[+m.slice(5)-1]+' '+m.slice(0,4);};
+const EST={ren:'Renovó',adel:'Renovó (adelantado)',pend:'Pendiente',no:'No renueva',lnr:'Liquidó sin renovar',leg:'⚖️ En legal'};
+const hit=(i,k)=>k==='seg'?(!i.renew&&SEG.includes(i.g)):k==='vis'?(!i.renew&&i.g==='visita'):k==='todos'||k==='cp'&&i.cp||k==='cv'&&i.cvenc||k==='enmes'&&i.renew&&!i.adel||k!=='cp'&&k!=='cv'&&k!=='enmes'&&(k==='ren'?i.renew:(k==='adel'?i.adel:(k==='pt'?!i.renew:(k==='por'?(i.est==='pend'||i.est==='lnr'):i.est===k))));
+/* ---------- marcas: exportar / importar (viajan en ambos sentidos; solo IDs de crédito + gestión + comentarios) ---------- */
+const GKEYS=['tiempo','si','visita','espera','prox','no'];
+function cleanMark(n){ const o={}; if(!n||typeof n!=='object') return o;
+  if(GKEYS.includes(n.g)) o.g=n.g; if(n.no===true) o.no=true; if(typeof n.mot==='string'&&n.mot) o.mot=n.mot.slice(0,80);
+  if(typeof n.fc==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(n.fc)) o.fc=n.fc; if(+n.ts>0) o.ts=+n.ts;
+  if(Array.isArray(n.com)) o.com=n.com.filter(c=>c&&typeof c.x==='string'&&c.x.trim()&&/^\d{4}-\d{2}-\d{2}$/.test(c.d||'')).slice(0,200).map(c=>({d:c.d,x:c.x.slice(0,500),...(c.a?{a:String(c.a).slice(0,20)}:{})}));
+  return o; }
+function marksFor(suc){ const ids=cart?new Set(cart.rows.filter(r=>!suc||r.suc===suc).map(r=>r.id)):null, out={};
+  Object.keys(marks).forEach(id=>{ if(ids&&!ids.has(id)) return; const m=marks[id]; if(!(m.g||m.fc||m.mot||(m.com&&m.com.length))) return; out[id]=cleanMark(m); }); return out; }
+async function doExport(suc){ const mk=marksFor(suc), n=Object.keys(mk).length;
+  if(!n){ view.msg='No hay marcas para exportar'+(suc?' de '+suc:'')+'.'; view.exp=false; draw(); return; }
+  const payload={formato:'crediclub-renov-marcas',v:1,de:AUTOR,sucursal:suc||(GER?myOffice():''),exportedAt:new Date().toISOString(),marks:mk};
+  const fn='marcas_'+(suc||(GER&&myOffice())||'oficina').replace(/[^A-Za-z0-9]+/g,'_')+'_'+today()+'.json', blob=new Blob([JSON.stringify(payload)],{type:'application/json'}), f=new File([blob],fn,{type:'application/json'});
+  view.exp=false;
+  try{ if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:'Marcas de renovaciones'+(suc?' — '+suc:'')}); view.msg='Marcas exportadas ('+n+' clientes).'; draw(); return; } }catch(e){ if(e&&e.name==='AbortError'){ draw(); return; } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+  view.msg='Archivo "'+fn+'" descargado ('+n+' clientes).'; draw(); }
+function mergeMarks(inc){ let cli=0, com=0;
+  Object.keys(inc).forEach(id=>{ if(!/^\d+$/.test(id)) return; const n=cleanMark(inc[id]); if(!Object.keys(n).length) return; const before=JSON.stringify(marks[id]||{}), e=marks[id]=marks[id]||{};
+    if(tsOfM(n)>tsOfM(e)){ ['g','no','mot','fc'].forEach(k=>{ if(n[k]!=null) e[k]=n[k]; else delete e[k]; }); e.ts=tsOfM(n); }
+    const have=new Set((e.com||[]).map(c=>c.d+'|'+c.x)); (n.com||[]).forEach(c=>{ if(!have.has(c.d+'|'+c.x)){ (e.com=e.com||[]).push(c); com++; } });
+    if(e.com) e.com.sort((a,b)=>a.d.localeCompare(b.d));
+    if(JSON.stringify(e)!==before) cli++; else if(before==='{}') delete marks[id]; });
+  save(); return {cli,com}; }
+async function importFile(file){ try{ const j=JSON.parse(await file.text());
+    if(!j||j.formato!=='crediclub-renov-marcas'||typeof j.marks!=='object') { view.msg='Ese archivo no es de marcas de renovaciones.'; draw(); return; }
+    const r=mergeMarks(j.marks); view.msg='Marcas importadas'+(j.de?' de '+j.de:'')+(j.sucursal?' ('+j.sucursal+')':'')+': '+r.cli+' cliente(s) con cambios y '+r.com+' comentario(s) nuevo(s).'; draw();
+  }catch(e){ view.msg='No pude leer el archivo de marcas.'; draw(); } }
+function draw(){
+  const R=$('#rnvRoot'); if(!R) return; const oldTop={}; R.querySelectorAll('[data-row]').forEach(r=>{ oldTop[r.dataset.row]=r.getBoundingClientRect().top; }); let h='<div class="rbar"><h2>🔁 Renovaciones</h2><span style="flex:1"></span><button class="b" data-a="close">Cerrar ✕</button></div>';
+  h+='<div class="rsub">Todo se queda en este navegador (no se manda ni se respalda en ningún lado). Sube el Excel de cartera; al subir uno nuevo se actualiza solo el avance y se conservan tus motivos y comentarios.</div>';
+  h+='<div class="rbar"><button class="b pri" data-a="up">📂 Subir cartera (.xlsx)</button>'+(cart?'<span class="rsub">'+esc(cart.meta.name)+' · '+cart.meta.n.toLocaleString('es-MX')+' créditos · cargada '+fdate(cart.meta.at.slice(0,10))+'</span><button class="b" data-a="del">Borrar cartera</button>':'')+'</div>';
+  h+='<div class="rbar"><button class="b" data-a="expm">📤 Exportar marcas</button><button class="b" data-a="impm">📥 Importar marcas</button><span class="rsub">Solo viajan IDs de crédito, gestión, fechas y comentarios (sin cartera ni datos del cliente).</span></div>';
+  if(view.exp&&cart){ const sc={}; cart.rows.forEach(r=>{ sc[r.suc]=1; }); h+='<div class="rcard"><b>¿De qué oficina exportas?</b><div class="rbar">'+Object.keys(sc).sort().map(k=>{ const n=Object.keys(marksFor(k)).length; return '<button class="b" data-exp="'+esc(k)+'">📤 '+esc(k)+' ('+n+')</button>'; }).join('')+'<button class="b" data-a="expx">Cancelar</button></div></div>'; }
+  if(view.msg) h+='<div class="rsub" style="margin:4px 0"><b>'+esc(view.msg)+'</b></div>';
+  if(view.pick){ h+='<div class="rcard"><b>¿Cuál es tu oficina?</b><div class="rsub">El archivo trae varias; solo se guarda la que elijas.</div><div class="rbar">'+view.pick.offs.map(o=>'<button class="b" data-off="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div></div>'; }
+  if(view.map){ h+='<div class="rcard"><b>No encontré estas columnas:</b><div class="rsub">Elige cuál del archivo corresponde. Se guarda y no te lo vuelvo a pedir.</div>'; view.map.missing.forEach(f=>{ h+='<div class="rbar"><span style="min-width:140px">'+esc(FIELDS[f][0])+'</span><select class="in" data-map="'+f+'"><option value="">— elegir —</option>'+view.map.heads.map((x,i)=>'<option value="'+i+'">'+esc(x||'(vacía '+(i+1)+')')+'</option>').join('')+'</select></div>'; }); h+='<button class="b pri" data-a="applymap">Aplicar</button></div>'; R.innerHTML=h; return; }
+  if(!cart){ h+='<div class="rcard">Aún no hay cartera cargada.</div>'; R.innerHTML=h; return; }
+  const months=monthsList(); const A=analyze(view.month), T=A.tot;
+  h+='<div class="rbar"><label>Vencimientos de <select class="in" data-a="month">'+months.map(m=>'<option value="'+m+'"'+(m===view.month?' selected':'')+'>'+mname(m)+'</option>').join('')+'</select></label></div>';
+  const pm=pct(T.ren,T.base), pa=pct(T.ren-T.adel,T.base-T.adel), cR=Object.values(comp[view.month]||{}).reduce((a,b)=>a+(+b||0),0);
+  h+='<div class="rcard"><div class="big"><div><div class="n">'+pf(pm)+'</div><div class="l">Renovación del mes<br>('+T.ren+' de '+T.base+' vencimientos · '+T.adel+' adelantados incluidos)</div></div><div><div class="n" style="font-size:26px">'+pf(pa)+'</div><div class="l">Avance sobre lo pendiente<br>('+(T.ren-T.adel)+' de '+(T.base-T.adel)+' · sin los adelantados)</div></div><div class="l">Monto vencimientos: <b>'+money(T.monto)+'</b>'+(cR?'<br>Compromiso región: <b>'+cR+'</b> renovaciones · real '+T.ren:'')+'</div></div></div>';
+  if(T.cv) h+='<div class="rcard" style="border-color:#c0392b;background:#fdf0ee"><b style="color:#c0392b">⏰ '+T.cv+' compromiso(s) vencido(s) — volver a preguntar</b> <button class="b" data-f="cv">Ver cuáles</button></div>';
+  const G={}; A.items.forEach(i=>{ const k=view.by==='as'?(i.as||'(sin asesor)'):i.suc; const g=G[k]=G[k]||{...Z0(),suc:i.suc}; g.base++; if(i.cp) g.cp++; if(i.cvenc) g.cv++; if(i.renew){ g.ren++; if(i.adel) g.adel++; } else { g.pt++; if(i.est==='no') g.no++; else { g.por++; if(i.est==='lnr') g.lnr++; } } });
+  if(A.leg.length) h+='<div class="rsub" style="margin:4px 2px">⚖️ <b>'+A.leg.length+'</b> cuenta(s) con 61+ días de atraso al inicio del mes están en legal y <b>no cuentan</b> en Venc. <button class="b" data-f="leg">ver cuáles</button></div>';
+  if(!GER) h+='<div class="rbar"><button class="b'+(view.by==='suc'?' on':'')+'" data-by="suc">Por oficina / gerente</button><button class="b'+(view.by==='as'?' on':'')+'" data-by="as">Por asesor</button></div>';
+  const G2='color:#8a93a0';
+  h+='<div class="rcard" style="overflow:auto"><table><tr><th>'+(view.by==='as'?'Asesor':'Oficina / gerente')+'</th><th title="Vencimientos del mes">Venc.</th><th title="Renovados (incluye adelantados)">Reno.</th><th class="pr" title="Venc. − Reno. − N.Ren">Por Renovar</th><th style="border-left:2px solid #1c2430;'+G2+'" title="Adelantados: ya incluidos en Reno.">Adel.</th><th style="'+G2+'" title="Liquidó sin renovar (dentro de Pend.)">Liq S/R</th><th style="'+G2+'" title="No renueva (dentro de Pend.)">N.Ren</th><th>%Mes</th><th title="Base = Venc. − Adel.: lo que quedaba por trabajar al empezar el mes" style="border-left:2px solid #1c2430">Base</th><th title="En el mes = Reno. − Adel.: renovaron dentro del mes">En el mes</th><th title="% Avance = En el mes / Base">% Avance</th>'+(view.by==='suc'?'<th title="Compromiso: clientes marcados \"Renueva en tiempo\" o \"Sí renueva\" que aún no renuevan (se suma solo)"># Comp.</th><th title="% de renovación si cumplen el compromiso: (Reno. + Comp.) / Venc.">% Comp.</th>':'')+'</tr>';
+  const DV='border-left:2px solid #1c2430;';
+  const rowH=(lab,k,s,cmp)=>'<td>'+lab+'</td><td class="rp">'+dl('todos',k,s.base)+'</td><td class="rp">'+dl('ren',k,s.ren)+'</td><td class="rp pr">'+dl('por',k,s.por)+'</td><td style="'+DV+G2+'">'+dl('adel',k,s.adel)+'</td><td style="'+G2+'">'+dl('lnr',k,s.lnr)+'</td><td style="'+G2+'">'+dl('no',k,s.no)+'</td><td class="rp">'+pf(pct(s.ren,s.base))+'</td><td style="'+DV+'">'+(s.base-s.adel)+'</td><td>'+dl('enmes',k,s.ren-s.adel)+'</td><td class="rp">'+pf(pct(s.ren-s.adel,s.base-s.adel))+'</td>'+(cmp==null?'':cmp);
+  Object.keys(G).sort().forEach(k=>{ const s=G[k], ge=view.by==='suc'?gerOf(k):''; h+='<tr>'+rowH(esc(k)+(view.by==='as'?' <span class="rsub">'+esc(s.suc)+'</span>':'')+(ge?'<div class="rsub">'+esc(ge)+'</div>':''),k,s,view.by==='suc'?'<td class="rp">'+dl('cp',k,s.cp)+(s.cv?' <span class="warn" title="Compromisos vencidos">⏰'+s.cv+'</span>':'')+'</td><td class="rp">'+pf(pct(s.ren+s.cp,s.base))+'</td>':'')+'</tr>'; });
+  h+='<tr>'+rowH('<b>'+(GER?'Total oficina':'Región')+'</b>','',T,view.by==='suc'?'<td class="rp">'+dl('cp','',T.cp)+(T.cv?' <span class="warn">⏰'+T.cv+'</span>':'')+'</td><td class="rp">'+pf(pct(T.ren+T.cp,T.base))+'</td>':'')+'</tr></table><div class="rsub" style="margin-top:6px">Las 3 grandes: <b>Venc.</b> · <b>Reno.</b> (todo el que ya tiene crédito nuevo, incluye adelantados y regresados) · <b>Por Renovar</b> (= Venc. − Reno. − N.Ren). Después de la línea: Adel. (dentro de Reno.) · Liq S/R (liquidó sin renovar, dentro de Por Renovar) · N.Ren (no renueva, marcado por ti). Base = Venc. − Adel. (lo que quedaba por trabajar al empezar el mes) · En el mes = Reno. − Adel. (renovaron dentro del mes) · % Avance = En el mes / Base. # Comp. = clientes que te dijeron que sí renuevan ("Renueva en tiempo" / "Sí renueva") y aún no renuevan; se suma solo al marcarlos. % Comp. = (Reno. + # Comp.) / Venc. ⏰ = compromisos con fecha ya vencida.</div></div>';
+  { const cur=today().slice(0,7), ms=months.filter(m=>m<=cur).slice(-8).reverse(), sk=Object.keys(A.sucs).sort();
+    h+='<div class="rcard" style="overflow:auto"><b>Meses anteriores — % de renovación por oficina</b><div class="rsub">Con el estatus de hoy de cada vencimiento (clic en el mes para verlo completo).</div><table><tr><th>Mes</th>'+sk.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th>Región</th></tr>'+ms.map(m=>{ const x=analyze(m); return '<tr><td><a href="#" data-gm="'+m+'">'+mname(m)+'</a></td>'+sk.map(k=>{const s=x.sucs[k];return '<td>'+(s?pf(pct(s.ren,s.base)):'—')+'</td>';}).join('')+'<td class="rp">'+pf(pct(x.tot.ren,x.tot.base))+'</td></tr>'; }).join('')+'</table></div>'; }
+  const ck=cortes[view.month]; if(ck&&Object.keys(ck).length){ const wk=d=>{ const x=new Date(d+'T12:00:00Z'); const dow=(x.getUTCDay()+6)%7; x.setUTCDate(x.getUTCDate()-dow); return x.toISOString().slice(0,10); }, byW={}; Object.keys(ck).sort().forEach(d=>{ byW[wk(d)]=d; }); const ds=Object.values(byW).sort().slice(-8); h+='<div class="rcard"><b>Cortes (cada vez que subes cartera)</b><table><tr><th>Fecha</th>'+Object.keys(A.sucs).sort().map(k=>'<th>'+esc(k)+'</th>').join('')+'<th>Región</th></tr>'+ds.map(d=>'<tr><td>'+fdate(d)+'</td>'+Object.keys(A.sucs).sort().map(k=>{const x=ck[d][k];return '<td>'+(x?pf(pct(x.r,x.b)):'—')+'</td>';}).join('')+'<td class="rp">'+pf(pct(ck[d]['*'].r,ck[d]['*'].b))+'</td></tr>').join('')+'</table><div class="rsub">Se guarda el % de cada carga; aquí se muestra el último corte de cada semana (lunes a sábado), así no se llena aunque cargues a diario.</div></div>'; }
+  const cnt=k=>k==='leg'?A.leg.filter(i=>(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:k==='arr'?A.arr.filter(i=>!i.renew&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:A.items.filter(i=>hit(i,k)&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length;
+  h+='<div class="rbar">'+[['por','Por renovar'],['cp','Comprometidos'],['cv','⏰ Compromiso vencido'],['seg','👀 En seguimiento'],['arr','↪ Arrastre de meses anteriores'],['leg','⚖️ En legal (no cuentan)'],['vis','🚶 Visitas pendientes'],['lnr','Liquidó sin renovar'],['no','No renueva'],['pt','Pendientes (total)'],['ren','Renovados'],['adel','Adelantados'],['todos','Todos']].map(([k,l])=>'<button class="b'+(view.filter===k?' on':'')+'" data-f="'+k+'">'+l+' · '+cnt(k)+'</button>').join('')+'</div>';
+  if(view.filter==='no'){ const cm={}; A.items.filter(i=>hit(i,'no')&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).forEach(i=>{ const k=(marks[i.id]||{}).mot||'(sin motivo)'; cm[k]=(cm[k]||0)+1; });
+    h+='<div class="rbar"><select class="in" data-a="mot"><option value="">Todos los motivos</option>'+Object.keys(cm).sort((a,b)=>cm[b]-cm[a]).map(k=>'<option value="'+esc(k==='(sin motivo)'?'':k)+'"'+(view.mot===k?' selected':'')+'>'+esc(k)+' ('+cm[k]+')</option>').join('')+'</select></div>'; }
+  h+='<div class="rbar">'+(GER?'':'<select class="in" data-a="suc"><option value="">Todas las oficinas</option>'+Object.keys(A.sucs).sort().map(k=>'<option'+(view.suc===k?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>')+'<input class="in" style="flex:1;min-width:150px" placeholder="🔎 Buscar cliente o ID" value="'+esc(view.q)+'" data-a="q"></div>';
+  const q=norm(view.q); let L=(view.filter==='arr'?A.arr:view.filter==='leg'?A.leg:A.items).filter(i=>(view.filter==='arr'||view.filter==='leg'||hit(i,view.filter))&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)&&(view.filter!=='no'||!view.mot||((marks[i.id]||{}).mot||'')===view.mot)&&(!q||norm(i.cl).includes(q)||i.cid.includes(q)||i.id.includes(q)));
+  L.sort((a,b)=>((view.filter==='cp'||view.filter==='cv')?(a.fc||'9').localeCompare(b.fc||'9'):tsOf(a.id)-tsOf(b.id))||(a.fin||'').localeCompare(b.fin||'')||b.at-a.at);
+  h+='<div id="rnvList" class="rbar"><span class="rsub"><b>'+L.length+'</b> cliente(s)'+(view.as?' · asesor: <b>'+esc(view.as)+'</b> <a href="#" data-clras="1">quitar ✕</a>':'')+'</span><span style="flex:1"></span><button class="b" data-a="copylist">📋 Copiar lista (WhatsApp)</button></div>';
+  L.slice(0,150).forEach(i=>{ const m=marks[i.id]||{}, op=view.open===i.id, dias=dd(today(),i.fin);
+    h+='<div class="rrow '+i.est+(i.cvenc?' cv':'')+'" data-row="'+i.id+'"><div class="t"><span>'+esc(i.cl)+' <span class="rsub">#'+i.cid+'</span></span><span>'+money(i.mo)+'</span></div><div class="rsub">'+esc(i.suc)+' · '+esc(i.as)+' · ciclo '+(i.ci||'—')+' · vence '+fdate(i.fin)+(i.est==='pend'?(dias<0?' <span class="warn">('+(-dias)+'d vencido)</span>':' ('+dias+'d)'):'')+(i.at>0?' · <span class="warn">'+i.at+'d atraso</span>':'')+'</div><div style="margin-top:3px"><span class="bd '+i.est+'">'+EST[i.est]+'</span>'+(i.renew?' <span class="rsub">renovó <b>'+fdate(i.nx.ini)+'</b> (ciclo '+(i.nx.ci||'?')+', '+esc((i.nx.as||'').split(' ').slice(0,2).join(' '))+')'+(i.liq?' · liquidó <b>'+fdate(i.liq)+'</b> · '+(dd(i.liq,i.nx.ini)<=0?'mismo día':dd(i.liq,i.nx.ini)+' d después'):'')+'</span>':(i.est==='lnr'&&i.liq?' <span class="rsub"><b>liquidó '+fdate(i.liq)+'</b> (hace '+dd(i.liq,today())+' d)</span>':''))+gestHTML(i,m)+'</div>'+noteHTML(m);
+    if(op){ h+='<div class="det" data-stop="1"><div>📞 <b>'+esc(i.tel||'sin teléfono')+'</b></div><div>🏪 '+esc(i.neg||'—')+'</div><div>🏠 '+esc(i.dom||'—')+'</div><div class="rsub">Historial: '+i.hist.map(x=>'c'+(x.ci||'?')+' '+fdate(x.ini)+'→'+fdate(x.fin)+' '+esc(x.st)).join(' · ')+'</div>';
+      if(!i.renew){ const sel=i.g==='no'?'no|'+(m.mot||''):(i.g||''); h+='<div class="rbar"><select class="in" data-g="'+i.id+'"><option value="">Gestión…</option><optgroup label="✅ Compromiso (cuenta)">'+['tiempo','si'].map(x=>'<option value="'+x+'"'+(sel===x?' selected':'')+'>'+GL[x]+'</option>').join('')+'</optgroup><optgroup label="👀 En seguimiento (no cuenta)">'+SEG.map(x=>'<option value="'+x+'"'+(sel===x?' selected':'')+'>'+GL[x]+'</option>').join('')+'</optgroup><optgroup label="❌ No renueva — motivo">'+MOTIVOS.concat(m.mot&&!MOTIVOS.includes(m.mot)?[m.mot]:[]).map(x=>'<option value="no|'+x+'"'+(sel==='no|'+x?' selected':'')+'>'+x+'</option>').join('')+'</optgroup></select><label class="rsub">📅 fecha compromiso <input class="in" type="date" value="'+esc(m.fc||'')+'" data-fc="'+i.id+'"></label></div>'; }
+      (m.com||[]).slice().reverse().forEach(c=>{ h+='<div class="cm"><span class="rsub">'+fdate(c.d)+(c.a?' · '+esc(c.a):'')+'</span> '+esc(c.x)+'</div>'; });
+      h+='<div class="rbar"><input class="in" style="flex:1" placeholder="Agregar comentario (sin teléfonos ni direcciones)…" data-cm="'+i.id+'"><button class="b" data-cmb="'+i.id+'">Guardar</button></div></div>'; }
+    h+='</div>'; });
+  if(L.length>150) h+='<div class="rsub">Mostrando 150; usa el buscador u oficina para acotar.</div>';
+  R.innerHTML=h;
+  // animación: las tarjetas que cambian de lugar se deslizan; la que acabas de tocar parpadea al irse al fondo
+  R.querySelectorAll('[data-row]').forEach(r=>{ const id=r.dataset.row, o=oldTop[id]; if(o!=null){ const dy=o-r.getBoundingClientRect().top; if(Math.abs(dy)>3){ r.style.transition='none'; r.style.transform='translateY('+dy+'px)'; r.getBoundingClientRect(); r.style.transition='transform .9s cubic-bezier(.2,.8,.2,1)'; r.style.transform=''; } } if(view.flash===id) r.classList.add('flash'); });
+  view.flash=null;
+}
+// Ventanita al elegir una gestión: compromiso/seguimiento → fecha obligatoria + comentario opcional; no renueva → comentario obligatorio.
+function askGest(id,v){
+  const isNo=v.indexOf('no|')===0, m=marks[id]||{}, nm=((document.querySelector('[data-row="'+id+'"] .t span')||{}).textContent||'').replace(/#\d+$/,'').trim();
+  const lab=isNo?'❌ No renueva — '+v.slice(3):(SEG.includes(v)?'👀 ':'✅ ')+GL[v];
+  const ov=document.createElement('div'); ov.id='rnvModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:#fff;border-radius:12px;padding:16px;width:100%;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.3)" class="rnv"><div style="font-weight:800">'+esc(nm)+'</div><div class="rsub" style="margin:2px 0 10px">'+esc(lab)+'</div>'
+   +(isNo?'':'<label class="rsub">📅 Fecha compromiso <b style="color:#c0392b">(obligatoria)</b><br><input class="in" type="date" id="gmFc" value="'+esc(m.fc||'')+'" style="width:100%;margin-top:3px"></label><div style="height:8px"></div>')
+   +'<label class="rsub">💬 Comentario '+(isNo?'<b style="color:#c0392b">(obligatorio)</b>':'(opcional)')+'<br><input class="in" id="gmCm" placeholder="'+(isNo?'¿Por qué no renueva? (sin datos personales)':'Comentario (sin datos personales)')+'" style="width:100%;margin-top:3px" autocomplete="off"></label><div id="gmErr" class="warn" style="min-height:18px;margin-top:6px"></div>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="b" id="gmNo">Cancelar</button><button type="button" class="b pri" id="gmOk">OK</button></div></div>';
+  document.body.appendChild(ov);
+  const close=cancel=>{ ov.remove(); if(cancel) draw(); }, fcI=ov.querySelector('#gmFc'), cmI=ov.querySelector('#gmCm'), er=ov.querySelector('#gmErr');
+  const ok=()=>{ const tx=cmI.value.trim();
+    if(isNo&&!tx){ er.textContent='Escribe un comentario para poder guardar.'; cmI.focus(); return; }
+    if(!isNo&&!fcI.value){ er.textContent='Pon la fecha compromiso para poder guardar.'; fcI.focus(); return; }
+    const mm=marks[id]=marks[id]||{};
+    if(isNo){ mm.g='no'; mm.no=true; mm.mot=v.slice(3); delete mm.fc; } else { mm.g=v; mm.no=false; delete mm.mot; mm.fc=fcI.value; }
+    if(tx) (mm.com=mm.com||[]).push({d:today(),x:tx,a:AUTOR});
+    mm.ts=Date.now(); view.flash=id; save(); close(false); draw(); };
+  ov.querySelector('#gmOk').onclick=ok; ov.querySelector('#gmNo').onclick=()=>close(true);
+  ov.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); ok(); } else if(e.key==='Escape'){ close(true); } });
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(true); });
+  setTimeout(()=>(fcI&&!fcI.value?fcI:cmI).focus(),30);
+}
+function copyList(){
+  const A=analyze(view.month), q=norm(view.q);
+  const L=(view.filter==='arr'?A.arr:view.filter==='leg'?A.leg:A.items).filter(i=>(view.filter==='arr'||view.filter==='leg'||hit(i,view.filter))&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)&&(view.filter!=='no'||!view.mot||((marks[i.id]||{}).mot||'')===view.mot)&&(!q||norm(i.cl).includes(q)||i.cid.includes(q)||i.id.includes(q))).sort((a,b)=>a.suc.localeCompare(b.suc)||a.as.localeCompare(b.as)||(a.fin||'').localeCompare(b.fin||''));
+  if(!L.length){ view.msg='No hay clientes en esta lista.'; draw(); return; }
+  const tit={leg:'En legal',arr:'Arrastre de meses anteriores',seg:'En seguimiento',vis:'Visitas pendientes',por:'Por renovar',pt:'Pendientes',lnr:'Liquidó sin renovar',no:'No renueva',ren:'Renovados',adel:'Renovación adelantada',todos:'Vencimientos'}[view.filter];
+  let out='*'+tit+' — '+mname(view.month)+'* ('+L.length+')\n'; let cs=null;
+  L.forEach((i,n)=>{ if(i.suc!==cs){ cs=i.suc; out+='\n*'+cs+'*\n'; } const m=marks[i.id]||{};
+    out+=(n+1)+'. '+i.cl+' — '+money(i.mo)+' · '+i.as.split(' ').slice(0,2).join(' ')+' · vence '+fdate(i.fin)+(i.liq?' · liquidó '+fdate(i.liq):'')+(i.renew?' · renovó '+fdate(i.nx.ini):'')+(i.g&&!i.renew?' · '+GL[i.g]+(i.g==='no'&&marks[i.id]&&marks[i.id].mot?' ('+marks[i.id].mot+')':'')+(i.fc&&i.g!=='no'?' · compromiso '+fdate(i.fc)+(i.cvenc?' VENCIDO':''):''):'')+(i.at>0?' · '+i.at+'d atraso':'')+(m.mot?' · '+m.mot:'')+'\n'; });
+  out+='\nPor favor denme el estatus de estos clientes.';
+  const ok=()=>{ view.msg='Lista copiada — lista para WhatsApp.'; draw(); };
+  const fb=()=>{ const ta=document.createElement('textarea'); ta.value=out; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); let r=false; try{r=document.execCommand('copy');}catch(_){} ta.remove(); if(r) ok(); else { view.msg='No se pudo copiar.'; draw(); } };
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(out).then(ok,fb); else fb();
+}
+const GL={tiempo:'Renueva en tiempo',si:'Sí renueva',visita:'Se visita',espera:'Se quiere esperar',prox:'Renueva el próximo mes',no:'No renueva'};
+const SEG=['visita','espera','prox'];
+function gestHTML(i,m){ if(i.renew||!i.g) return ''; let h=' <span class="gc g-'+i.g+'">'+(i.g==='no'?'❌ ':(SEG.includes(i.g)?'👀 ':'✅ '))+GL[i.g]+(i.g==='no'&&m.mot?': '+esc(m.mot):'')+'</span>';
+  if(i.fc&&i.g!=='no'){ const dv=dd(i.fc,today()); h+=' <span class="gc g-fc">📅 '+fdate(i.fc)+'</span>'+(i.cvenc?' <span class="warn">⏰ vencido hace '+dv+' d — volver a preguntar</span>':(i.fc===today()?' <b>(hoy)</b>':'')); }
+  return h; }
+function noteHTML(m){ const c=(m.com||[])[(m.com||[]).length-1]; return c?'<div class="lastnote"><b>💬 '+esc(c.x)+'</b> <span class="rsub">('+fdate(c.d)+(c.a?' · '+esc(c.a):'')+')</span></div>':''; }
+function save(){ jset('marks',marks); jset('comp',comp); jset('cfg',cfg); }
+document.addEventListener('click',e=>{
+  const t=e.target; if(t.closest('#rnvOpen')){ $('#rnvPanel').classList.add('on'); draw(); return; }
+  if(!t.closest('#rnvPanel')) return;
+  const a=t.closest('[data-a]'); if(a){ const k=a.dataset.a;
+    if(k==='close') $('#rnvPanel').classList.remove('on');
+    else if(k==='up') $('#rnvFile').click();
+    else if(k==='impm') $('#rnvImp').click();
+    else if(k==='expx'){ view.exp=false; draw(); }
+    else if(k==='expm'){ if(GER||!cart){ if(!GER){ view.msg='Carga la cartera para exportar las marcas por oficina.'; draw(); } else doExport(''); } else { view.exp=true; draw(); } }
+    else if(k==='copylist'){ copyList(); }
+    else if(k==='del'){ if(confirm('¿Borrar la cartera cargada de este navegador? Tus motivos y comentarios se conservan.')){ idbDel('cartera'); cart=null; view.msg='Cartera borrada.'; draw(); } }
+    else if(k==='applymap'){ const pend={}; document.querySelectorAll('[data-map]').forEach(s=>{ if(s.value!=='') pend[s.dataset.map]=s.value; }); const r=parseAOA(view.map.aoa,pend); if(r.missing){ view.msg='Aún faltan columnas.'; draw(); return; } const nm=view.map.name; finish(r.rows,nm); } return; }
+  const dr=t.closest('[data-dr]'); if(dr){ e.preventDefault(); const k=dr.dataset.k; view.filter=dr.dataset.dr; if(view.by==='as'){ view.as=k; view.suc=''; } else { view.suc=k; view.as=''; } view.open=null; draw(); const l=document.getElementById('rnvList'); if(l) l.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+  if(t.closest('[data-clras]')){ e.preventDefault(); view.as=''; draw(); return; }
+  const by=t.closest('[data-by]'); if(by){ view.by=by.dataset.by; draw(); return; }
+  const of=t.closest('[data-off]'); if(of&&view.pick){ const p=view.pick; finish(p.rows,p.name,[of.dataset.off]); return; }
+  const ex=t.closest('[data-exp]'); if(ex){ doExport(ex.dataset.exp); return; }
+  const gm=t.closest('[data-gm]'); if(gm){ e.preventDefault(); view.month=gm.dataset.gm; draw(); $('#rnvPanel').scrollTop=0; return; }
+  const f=t.closest('[data-f]'); if(f){ view.filter=f.dataset.f; draw(); return; }
+  const no=t.closest('[data-no]'); if(no){ const id=no.dataset.no, m=marks[id]=marks[id]||{}; if(!m.no&&!m.mot){ view.msg='Primero elige el motivo.'; } else m.no=!m.no; save(); draw(); return; }
+  const cb=t.closest('[data-cmb]'); if(cb){ const id=cb.dataset.cmb, inp=document.querySelector('[data-cm="'+id+'"]'), x=inp&&inp.value.trim(); if(x){ const m=marks[id]=marks[id]||{}; (m.com=m.com||[]).push({d:today(),x,a:AUTOR}); m.ts=Date.now(); view.flash=id; save(); draw(); } return; }
+  if(t.closest('[data-stop]')) return;
+  const row=t.closest('[data-row]'); if(row){ view.open=view.open===row.dataset.row?null:row.dataset.row; draw(); }
+});
+document.addEventListener('change',e=>{ const t=e.target; if(!t.closest('#rnvPanel')) return;
+  if(t.dataset.a==='month'){ view.month=t.value; draw(); }
+  else if(t.dataset.a==='suc'){ view.suc=t.value; view.as=''; draw(); }
+  else if(t.dataset.a==='adv'){ cfg.adv=Math.max(0,+t.value||0); save(); draw(); }
+  else if(t.dataset.comp!=null){ const c=comp[view.month]=comp[view.month]||{}; if(t.value==='') delete c[t.dataset.comp]; else { const sx=analyze(view.month).sucs[t.dataset.comp]; c[t.dataset.comp]=Math.max(0,Math.min(+t.value||0,sx?sx.por:+t.value)); } save(); draw(); }
+  else if(t.dataset.a==='mot'){ view.mot=t.value; draw(); }
+  else if(t.dataset.g!=null){ const id=t.dataset.g, v=t.value; if(v===''){ const m=marks[id]=marks[id]||{}; delete m.g; delete m.mot; m.no=false; save(); draw(); } else askGest(id,v); }
+  else if(t.dataset.fc!=null){ const m=marks[t.dataset.fc]=marks[t.dataset.fc]||{}; if(t.value) m.fc=t.value; else delete m.fc; m.ts=Date.now(); view.flash=t.dataset.fc; save(); draw(); } });
+document.addEventListener('input',e=>{ const t=e.target; if(t.dataset&&t.dataset.a==='q'&&t.closest('#rnvPanel')){ view.q=t.value; const p=t.selectionStart; draw(); const n=document.querySelector('[data-a="q"]'); if(n){n.focus(); try{n.setSelectionRange(p,p);}catch(_){}} } });
+$('#rnvImp').addEventListener('change',e=>{ const f=e.target.files[0]; e.target.value=''; if(f) importFile(f); });
+$('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target.value=''; if(f) onFile(f); });
+idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
 </body>
