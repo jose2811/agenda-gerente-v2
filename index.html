@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.14.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.15.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.14.0';
+const VERSION='2.15.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1652,6 +1652,84 @@ document.addEventListener('input',e=>{ const t=e.target; if(t.dataset&&t.dataset
 $('#rnvImp').addEventListener('change',e=>{ const f=e.target.files[0]; e.target.value=''; if(f) importFile(f); });
 $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target.value=''; if(f) onFile(f); });
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
+})();
+</script>
+<!-- ===== Modo demostración (v2.15.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<script>
+(function(){
+  const HASH='550335ba', BK='demo:backup', P='gerente2:';
+  const fnv=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.charCodeAt(0); x=Math.imul(x,0x01000193)>>>0; } return x.toString(16); };
+  const pad=n=>String(n).padStart(2,'0');
+  const ds=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const off=n=>{ const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+n); return ds(d); };
+  const mon=n=>{ const d=new Date(); d.setHours(12,0,0,0); const w=d.getDay(); d.setDate(d.getDate()-(w===0?6:w-1)+n); return ds(d); };
+  function build(){
+    const T=off(0), Y=off(-1);
+    const st=(d,t)=>({d,t});
+    const as=[
+      {id:'ad1',name:'Karla Gómez (demo)',fechaAlta:off(-900),fechaNacimiento:null,activo:true,ausencia:null},
+      {id:'ad2',name:'Luis Ramírez (demo)',fechaAlta:off(-600),fechaNacimiento:off(-9000+3),activo:true,ausencia:null},
+      {id:'ad3',name:'Marisol Torres (demo)',fechaAlta:off(-400),fechaNacimiento:null,activo:true,ausencia:null},
+      {id:'ad4',name:'Iván Sandoval (demo)',fechaAlta:off(-250),fechaNacimiento:null,activo:true,ausencia:'incapacidad',dias:7,desdeAus:off(-3),regreso:off(4)},
+      {id:'ad5',name:'Daniela Cruz (demo)',fechaAlta:off(-120),fechaNacimiento:null,activo:true,ausencia:'vacaciones',desdeAus:off(-1)},
+      {id:'ad6',name:'Ernesto Villa (demo)',fechaAlta:off(-5),fechaNacimiento:null,activo:true,ausencia:null}
+    ];
+    const mk=(id,name,monto,asesor,tipo,h,extra)=>Object.assign({id,name,monto,asesor,tipo,h,notas:[],log:[{ts:new Date().toISOString(),txt:'Creado (demo)'}]},extra||{});
+    const pip=[
+      mk('pd1','Abarrotes La Esperanza',45000,'ad1','nuevo',{pe:st(T,'08:50')}),
+      mk('pd2','Tortillería Doña Lupe',60000,'ad2','renovar',{pe:st(off(-2),'11:10'),en:st(Y,'10:20'),pin:st(T,'08:55')}),
+      mk('pd3','Carnicería El Torito',80000,'ad3','nuevo',{pe:st(off(-5),'12:00'),en:st(off(-4),'09:40')}),
+      mk('pd4','Estética Bella Vista',35000,'ad1','renovar',{pe:st(off(-3),'10:00'),en:st(off(-2),'13:05'),pf:st(T,'10:30'),pin:st(T,'08:55')}),
+      mk('pd5','Ferretería San José',70000,'ad2','lnr',{pe:st(off(-4),'09:00'),en:st(off(-3),'12:30'),pf:st(off(-1),'16:00'),pin:st(T,'08:55'),de:st(T,'12:15')}),
+      mk('pd6','Taller Mecánico Rojas',50000,'ad3','nuevo',{pe:st(off(-6),'09:00'),en:st(off(-5),'10:00'),pf:st(off(-2),'15:00'),de:st(Y,'13:40')}),
+      mk('pd7','Papelería Escolar Tlaquepaque',28000,'ad1','leaddigital',{pe:st(off(-3),'09:30'),en:st(off(-2),'11:00'),re:st(Y,'17:10')},{motivo:'Mesa rechazó por buró'}),
+      mk('pd8','Fruterías Don Beto',55000,'ad2','renovar',{pe:st(off(-3),'10:45')}),
+      mk('pd9','Cocina Económica Mary',40000,'ad3','nuevo',{pe:st(off(-2),'09:15'),en:st(Y,'09:50')},{difs:[{d:Y,t:'09:00'}]}),
+      mk('pd10','Refaccionaria Los Pinos',90000,'ad6','nuevo',{pe:st(off(-1),'12:20'),en:st(T,'09:35'),pin:st(T,'08:55')}),
+      mk('pd11','Dulcería La Chiquita',30000,'ad1','nuevo',{pe:st(off(-5),'09:00'),en:st(off(-4),'10:00'),re:st(off(-2),'12:00')},{motivo:'El gerente vio poco el negocio'})
+    ];
+    const lk=(at)=>({at,mesa:['pd2','pd3','pd4','pd9','pd10'],des:['pd2','pd4','pd5','pd10']});
+    const dias={};
+    dias[T]={fichas:{real:4,total:6},mora17:{real:2,total:5},riesgo:{monto:38000},mora860:{real:3,comp:6},aprob:5,lock:lk('08:52')};
+    dias[Y]={fichas:{real:5,total:6},mora17:{real:4,total:5},riesgo:{monto:31000},mora860:{real:5,comp:6},aprob:7,lock:{at:'08:48',mesa:['pd3','pd6','pd7'],des:['pd6']}};
+    return {T,as,pip,dias,meta:{meta:700000}};
+  }
+  function load(){
+    const bk={}; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf(P)===0) bk[k]=localStorage.getItem(k); }
+    if(Object.keys(bk).length&&!bk[P+'demo']) localStorage.setItem(BK,JSON.stringify(bk));
+    Object.keys(bk).forEach(k=>localStorage.removeItem(k));
+    const d=build(), S=(k,v)=>localStorage.setItem(P+k,JSON.stringify(v));
+    S('config',{gerente:'Roberto Díaz (demo)',sucursal:'Oblatos Prueba'});
+    S('asesores',d.as); S('pipeline',d.pip); S('solicitudes',[]);
+    Object.keys(d.dias).forEach(k=>S('dia:'+k,d.dias[k]));
+    S('meta:'+mon(0),d.meta);
+    localStorage.setItem(P+'demo','1'); localStorage.setItem(P+'lastModified',new Date().toISOString());
+    location.reload();
+  }
+  function restore(){
+    const bk=JSON.parse(localStorage.getItem(BK)||'{}');
+    for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i); if(k&&k.indexOf(P)===0) localStorage.removeItem(k); }
+    Object.keys(bk).forEach(k=>localStorage.setItem(k,bk[k])); localStorage.removeItem(BK); location.reload();
+  }
+  function open(){
+    const hasBk=!!localStorage.getItem(BK), demoOn=localStorage.getItem(P+'demo')==='1';
+    const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35)"><div style="font-weight:800;font-size:16px">🎬 Modo demostración</div>'
+      +'<div style="font-size:12.5px;color:#5b6672;margin:6px 0 12px">Carga una oficina ficticia (“Oblatos Prueba”): equipo con incapacidad y vacaciones, expedientes en cada etapa, marcador y meta de la semana. Se envía a la consola de prueba. Tus datos reales se guardan aparte y los puedes restaurar.</div>'
+      +'<input id="dmKey" type="password" placeholder="Clave" autocomplete="off" style="width:100%;padding:10px;border:1px solid #cfd5dc;border-radius:9px;font-size:15px;box-sizing:border-box"><div id="dmErr" style="color:#c0392b;font-size:12px;min-height:16px;margin:4px 0"></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button id="dmNo" type="button" style="padding:9px 12px;border:1px solid #cfd5dc;background:#fff;border-radius:9px">Cerrar</button>'
+      +(hasBk?'<button id="dmRe" type="button" style="padding:9px 12px;border:0;background:#b4571f;color:#fff;border-radius:9px;font-weight:700">Restaurar mis datos</button>':'')
+      +'<button id="dmGo" type="button" style="padding:9px 12px;border:0;background:#1f6f5c;color:#fff;border-radius:9px;font-weight:700">'+(demoOn?'Recargar demo':'Cargar datos demo')+'</button></div></div>';
+    document.body.appendChild(ov);
+    const k=ov.querySelector('#dmKey'), er=ov.querySelector('#dmErr'), ok=()=>fnv(k.value.trim())===HASH, close=()=>ov.remove();
+    ov.querySelector('#dmNo').onclick=close; ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+    ov.querySelector('#dmGo').onclick=()=>{ if(!ok()){ er.textContent='Clave incorrecta.'; return; } load(); };
+    const re=ov.querySelector('#dmRe'); if(re) re.onclick=()=>{ if(!ok()){ er.textContent='Clave incorrecta.'; return; } restore(); };
+    k.addEventListener('keydown',e=>{ if(e.key==='Enter') ov.querySelector('#dmGo').click(); }); setTimeout(()=>k.focus(),50);
+  }
+  let taps=0, t0=0; const fv=document.querySelector('.footer');
+  if(fv) fv.addEventListener('click',()=>{ const n=Date.now(); taps=(n-t0<1500)?taps+1:1; t0=n; if(taps>=5){ taps=0; open(); } });
+  if(localStorage.getItem(P+'demo')==='1'){ const b=document.createElement('div'); b.textContent='🎬 DEMO — datos de muestra'; b.style.cssText='position:fixed;left:0;bottom:0;background:#7c3aed;color:#fff;font-size:11px;font-weight:800;padding:3px 9px;border-radius:0 8px 0 0;z-index:9000;pointer-events:none'; document.body.appendChild(b); }
 })();
 </script>
 </body>
