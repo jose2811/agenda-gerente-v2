@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.15.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.15.1 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.15.0';
+const VERSION='2.15.1';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1654,7 +1654,7 @@ $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
-<!-- ===== Modo demostración (v2.15.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<!-- ===== Modo demostración (v2.15.1): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
 <script>
 (function(){
   const HASH='550335ba', BK='demo:backup', P='gerente2:';
@@ -1718,7 +1718,7 @@ idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().sli
       +'<div style="font-size:12.5px;color:#5b6672;margin:6px 0 12px">Carga una oficina ficticia (“Oblatos Prueba”): equipo con incapacidad y vacaciones, expedientes en cada etapa, marcador y meta de la semana. Se envía a la consola de prueba. Tus datos reales se guardan aparte y los puedes restaurar.</div>'
       +'<input id="dmKey" type="password" placeholder="Clave" autocomplete="off" style="width:100%;padding:10px;border:1px solid #cfd5dc;border-radius:9px;font-size:15px;box-sizing:border-box"><div id="dmErr" style="color:#c0392b;font-size:12px;min-height:16px;margin:4px 0"></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button id="dmNo" type="button" style="padding:9px 12px;border:1px solid #cfd5dc;background:#fff;border-radius:9px">Cerrar</button>'
-      +(hasBk?'<button id="dmRe" type="button" style="padding:9px 12px;border:0;background:#b4571f;color:#fff;border-radius:9px;font-weight:700">Restaurar mis datos</button>':'')
+      +((hasBk||demoOn)?'<button id="dmRe" type="button" style="padding:9px 12px;border:0;background:#b4571f;color:#fff;border-radius:9px;font-weight:700">'+(hasBk?'Salir y restaurar mis datos':'Salir de la demo')+'</button>':'')
       +'<button id="dmGo" type="button" style="padding:9px 12px;border:0;background:#1f6f5c;color:#fff;border-radius:9px;font-weight:700">'+(demoOn?'Recargar demo':'Cargar datos demo')+'</button></div></div>';
     document.body.appendChild(ov);
     const k=ov.querySelector('#dmKey'), er=ov.querySelector('#dmErr'), ok=()=>fnv(k.value.trim())===HASH, close=()=>ov.remove();
