@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.15.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.16.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.15.1';
+const VERSION='2.16.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -520,7 +520,7 @@ function ageHint(l){ const o=oldest(l); if(!o||o.n<1) return ''; return 'Más an
 /* ---------- equipo ---------- */
 const asesorName=id=>{ const a=asesores.find(x=>x.id===id); return a?a.name+(a.activo?'':' (baja)'):'Sin asesor'; };
 function esElegible(a,ref){
-  if(!a.activo) return false;
+  if(!a.activo||a.gestor) return false;
   if(a.ausencia&&!(a.regreso&&a.regreso<=ref)) return false; // si puso fecha de regreso, vuelve a contar desde esa semana
   if(!a.fechaAlta) return true;
   return daysBetween(a.fechaAlta,ref)>=ANTIGUEDAD_MIN;
@@ -535,8 +535,36 @@ function nextOcc(dateStr,hoy){
   let nx=new Date(h.getFullYear(),m-1,d); if(nx<h0) nx=new Date(h.getFullYear()+1,m-1,d);
   return {dias:Math.round((nx-h0)/864e5), anios:nx.getFullYear()-y};
 }
+/* ---------- certificación (3 meses desde el ingreso) ---------- */
+const addMonthsD=(s,n)=>{ const d=new Date(s+'T00:00:00'), dd=d.getDate(); d.setMonth(d.getMonth()+n); if(d.getDate()!==dd) d.setDate(0); return toDateStr(d); };
+const esHabil=s=>{ const w=new Date(s+'T00:00:00').getDay(); return w!==0&&w!==6; };
+function finVentana(s){ let d=s,n=0,last=s; for(let i=0;i<10;i++){ if(esHabil(d)){ n++; last=d; if(n===2) break; } d=addDays(d,1); } return last; }  // 2 días hábiles
+function certInfo(a,hoy){
+  if(!a.activo||a.gestor||a.cert||!a.fechaAlta) return null;
+  const cert=addMonthsD(a.fechaAlta,3), dias=daysBetween(hoy,cert);
+  if(dias<-30||daysBetween(a.fechaAlta,hoy)<0) return null;
+  const mid=addDays(a.fechaAlta,Math.round(daysBetween(a.fechaAlta,cert)/2)), mes=addMonthsD(cert,-1), dos=addDays(cert,-14);
+  let tag=null;
+  if(hoy>=dos) tag='d'; else if(hoy>=mes&&hoy<=finVentana(mes)) tag='u'; else if(hoy>=mid&&hoy<=finVentana(mid)) tag='m';
+  return tag?{a,tag,cert,dias}:null;
+}
+const certKey=(i,hoy)=>i.a.id+'|'+i.tag+(i.tag==='d'?'|'+hoy:'');
+function certPendientes(hoy){ const ok=jget('certOk',{}); return asesores.map(a=>certInfo(a,hoy)).filter(i=>i&&!ok[certKey(i,hoy)]); }
+function certTexto(i){
+  const n=esc(i.a.name), f=fdy(i.cert);
+  if(i.tag==='m') return '🎓 A <b>'+n+'</b> le falta mes y medio para certificarse (certifica el '+f+').';
+  if(i.tag==='u') return '🎓 A <b>'+n+'</b> le falta 1 mes para certificarse (certifica el '+f+').';
+  return i.dias>0?'🎓 <b>'+n+'</b> se certifica en <b>'+i.dias+' día(s)</b> ('+f+').':i.dias===0?'🎓 <b>'+n+'</b> debe certificarse <b>hoy</b>.':'⚠️ <b>'+n+'</b> debió certificarse hace '+(-i.dias)+' día(s) ('+f+'). Si ya lo hizo, márcalo como certificado en Mi Equipo.';
+}
+function certPopup(){
+  const hoy=todayStr(), l=certPendientes(hoy); if(!l.length) return;
+  ask('🎓 Certificaciones pendientes',l.map(certTexto).join('<br><br>')+'<br><br><span class="sub">Al aceptar, los avisos de mes y medio y de un mes no vuelven a salir; el de las últimas 2 semanas vuelve mañana.</span>','Aceptar',false,()=>{
+    const ok=jget('certOk',{}); l.forEach(i=>{ ok[certKey(i,hoy)]=1; }); jset('certOk',ok); renderAll();
+  });
+}
 function eventosEquipo(hoy){
   const ev=[];
+  asesores.forEach(a=>{ const i=certInfo(a,hoy); if(i) ev.push({t:'k',n:a.name,dias:i.dias,info:i}); });
   asesores.filter(a=>a.activo).forEach(a=>{
     if(a.fechaNacimiento){ const o=nextOcc(a.fechaNacimiento,hoy); if(o&&o.dias<=7) ev.push({t:'c',n:a.name,...o}); }
     if(a.fechaAlta){ const o=nextOcc(a.fechaAlta,hoy); if(o&&o.anios>=1&&o.dias<=7) ev.push({t:'a',n:a.name,...o}); }
@@ -547,7 +575,8 @@ function eventosEquipo(hoy){
 function eventosHTML(){
   return eventosEquipo(todayStr()).map(e=>{
     const w=e.dias===0?'hoy':e.dias===1?'mañana':'en '+e.dias+' días';
-    if(e.t==='r'){ const ic=e.aus==='incapacidad'?'🏥':'🏖️', q=e.aus==='incapacidad'?'su incapacidad':'sus vacaciones';
+    if(e.t==='k') return certTexto(e.info);
+    if(e.t==='r'){ const ic=e.aus==='incapacidad'?'🏥':e.aus==='permiso'?'📝':'🏖️', q=e.aus==='incapacidad'?'su incapacidad':e.aus==='permiso'?'su permiso':'sus vacaciones';
       return e.dias<0?'⚠️ <b>'+esc(e.n)+'</b> debió regresar de '+q+' hace '+(-e.dias)+' día(s) — cámbialo a Activo en Mi Equipo.':ic+' <b>'+esc(e.n)+'</b> regresa de '+q+' '+(e.dias===0?'hoy':e.dias===1?'mañana':'en '+e.dias+' días')+'.'; }
     return e.t==='c'?'🎂 <b>'+esc(e.n)+'</b> cumple años '+w+'.':'🎉 <b>'+esc(e.n)+'</b> cumple '+e.anios+' año(s) en la empresa '+w+'.';
   }).join('<br>');
@@ -920,26 +949,29 @@ function renderEquipo(){
   const ev=eventosHTML(); $('#teamBanner').style.display=ev?'':'none'; $('#teamBanner').innerHTML=ev;
   $('#hc').innerHTML='<span>Asesores que cuentan: <b>'+n+'</b> de '+act.length+'</span><span>Meta Approvals: <b>'+(n*COVER_X)+'</b></span><span>Meta semanal mín.: <b>'+money(n*META_POR_ASESOR)+'</b></span>';
   const sf=act.filter(a=>!a.fechaAlta).length;
-  $('#hcNote').textContent='En vacaciones o incapacidad llena los días o la fecha de regreso (con uno basta, el otro se calcula; cuenta desde el día en que lo capturas). Cuentan los activos con 12+ días de ingreso al lunes (el tercer lunes ya cuentan) de la semana, sin vacaciones, incapacidad ni baja programada.'+(sf?' '+sf+' sin fecha de ingreso (cuentan por defecto).':'');
+  $('#hcNote').textContent='En vacaciones o incapacidad llena los días o la fecha de regreso (con uno basta, el otro se calcula; cuenta desde el día en que lo capturas). Cuentan los activos (no gestores) con 12+ días de ingreso al lunes (el tercer lunes ya cuentan) de la semana, sin vacaciones, incapacidad ni baja programada.'+(sf?' '+sf+' sin fecha de ingreso (cuentan por defecto).':'');
   const np=id=>pipeline.filter(p=>p.asesor===id&&!isClosed(p)).length;
   const rowA=a=>{
-    const ant=a.fechaAlta?daysBetween(a.fechaAlta,mon):null; const nuevo=a.activo&&!a.ausencia&&ant!==null&&ant<ANTIGUEDAD_MIN;
+    const ant=a.fechaAlta?daysBetween(a.fechaAlta,mon):null; const nuevo=a.activo&&!a.ausencia&&!a.gestor&&ant!==null&&ant<ANTIGUEDAD_MIN;
+    const ci=a.activo&&!a.gestor&&a.fechaAlta?addMonthsD(a.fechaAlta,3):null, certVis=ci&&daysBetween(todayStr(),ci)>=-30&&daysBetween(a.fechaAlta,todayStr())>=0;
     const hasP=pipeline.some(p=>p.asesor===a.id);
     return '<div class="as '+(a.activo?'':'off')+'"><div><div class="nm">'+esc(a.name)+'</div><div class="dt">'
       +(a.fechaAlta?'Ingreso '+fdy(a.fechaAlta):'Sin fecha de ingreso')+(a.fechaNacimiento?' · Cumple '+fd(a.fechaNacimiento):'')+' · '+np(a.id)+' prospecto(s) abiertos'
       +(nuevo?' · <b style="color:var(--warn)">aún no cuenta (menos de 12 días)</b>':'')
-      +(a.activo&&a.ausencia?' · <b style="color:var(--warn)">'+({vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',baja:'📤 Baja programada'}[a.ausencia]||a.ausencia)+(a.regreso?' · '+(a.dias?a.dias+' días · ':'')+'regresa '+fd(a.regreso):'')+' — no cuenta en la meta</b>':'')+'</div></div>'
+      +(a.gestor?' · <b style="color:var(--warn)">🧾 Gestor de cobranza — cuenta en plantilla, no en metas</b>':'')
+      +(a.activo&&a.cert?' · ✅ certificado':(certVis?' · 🎓 certifica '+fdy(ci):''))
+      +(a.activo&&a.ausencia?' · <b style="color:var(--warn)">'+({vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',permiso:'📝 Permiso',baja:'📤 Baja programada'}[a.ausencia]||a.ausencia)+(a.regreso?' · '+(a.dias?a.dias+' días · ':'')+'regresa '+fd(a.regreso):'')+' — no cuenta en la meta</b>':'')+'</div></div>'
       +(a.activo
-        ?'<div class="acts"><select data-aus="'+a.id+'" aria-label="Ausencia de '+esc(a.name)+'"><option value="">Activo</option><option value="vacaciones" '+(a.ausencia==='vacaciones'?'selected':'')+'>Vacaciones</option><option value="incapacidad" '+(a.ausencia==='incapacidad'?'selected':'')+'>Incapacidad</option><option value="baja" '+(a.ausencia==='baja'?'selected':'')+'>Baja programada</option></select>'+(a.ausencia==='vacaciones'||a.ausencia==='incapacidad'?'<label class="sub" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">días <input type="number" min="1" max="365" inputmode="numeric" data-dias="'+a.id+'" value="'+(a.dias||'')+'" style="width:56px" aria-label="Días de ausencia"> o regresa <input type="date" data-reg="'+a.id+'" value="'+esc(a.regreso||'')+'" aria-label="Regresa el (opcional)"></label>':'')+'<button class="btn" data-aedit="'+a.id+'" type="button">Editar</button><button class="btn bad" data-baja="'+a.id+'" type="button">Dar de baja</button></div>'
+        ?'<div class="acts"><select data-aus="'+a.id+'" aria-label="Ausencia de '+esc(a.name)+'"><option value="">Activo</option><option value="vacaciones" '+(a.ausencia==='vacaciones'?'selected':'')+'>Vacaciones</option><option value="incapacidad" '+(a.ausencia==='incapacidad'?'selected':'')+'>Incapacidad</option><option value="permiso" '+(a.ausencia==='permiso'?'selected':'')+'>Permiso</option><option value="baja" '+(a.ausencia==='baja'?'selected':'')+'>Baja programada</option></select>'+(a.ausencia==='vacaciones'||a.ausencia==='incapacidad'||a.ausencia==='permiso'?'<label class="sub" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">días <input type="number" min="1" max="365" inputmode="numeric" data-dias="'+a.id+'" value="'+(a.dias||'')+'" style="width:56px" aria-label="Días de ausencia"> o regresa <input type="date" data-reg="'+a.id+'" value="'+esc(a.regreso||'')+'" aria-label="Regresa el (opcional)"></label>':'')+(certVis&&!a.cert?'<button class="btn" data-cert="'+a.id+'" type="button">Certificado ✅</button>':'')+'<button class="btn" data-aedit="'+a.id+'" type="button">Editar</button><button class="btn bad" data-baja="'+a.id+'" type="button">Dar de baja</button></div>'
         :'<div class="acts"><button class="btn" data-react="'+a.id+'" type="button">Reactivar</button>'+(hasP?'':'<button class="btn bad" data-del="'+a.id+'" type="button">Eliminar</button>')+'</div>')+'</div>';
   };
   $('#asList').innerHTML=act.length||baj.length?act.map(rowA).join('')+(baj.length?'<h2>Bajas</h2>'+baj.map(rowA).join(''):''):'<div class="empty">Aún no hay asesores. Agrégalos arriba: sin ellos no se calculan el cover ni la meta semanal.</div>';
 }
 function editAsesor(a){
-  const extra='<label class="lbl">Nombre<input class="field" id="xN" value="'+esc(a.name)+'"></label><div class="two"><label class="lbl">Fecha de ingreso<input class="field" type="date" id="xA" value="'+(a.fechaAlta||'')+'"></label><label class="lbl">Cumpleaños<input class="field" type="date" id="xC" value="'+(a.fechaNacimiento||'')+'"></label></div>';
+  const extra='<label class="lbl">Nombre<input class="field" id="xN" value="'+esc(a.name)+'"></label><div class="two"><label class="lbl">Fecha de ingreso<input class="field" type="date" id="xA" value="'+(a.fechaAlta||'')+'"></label><label class="lbl">Cumpleaños<input class="field" type="date" id="xC" value="'+(a.fechaNacimiento||'')+'"></label></div><label class="lbl" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="xG" '+(a.gestor?'checked':'')+'> 🧾 Es gestor de cobranza (ocupa un puesto de asesor: cuenta en plantilla, no en metas)</label>';
   ask('Editar asesor','','Guardar',false,()=>{
     const nm=$('#xN').value.trim(); if(!nm){ toast('El nombre no puede quedar vacío'); return false; }
-    a.name=nm; a.fechaAlta=$('#xA').value||null; a.fechaNacimiento=$('#xC').value||null; saveAsesores(); renderAll(); toast('Guardado');
+    a.name=nm; a.fechaAlta=$('#xA').value||null; a.fechaNacimiento=$('#xC').value||null; a.gestor=$('#xG').checked; saveAsesores(); renderAll(); toast('Guardado');
   },{extra});
 }
 function addAsesor(){
@@ -1220,6 +1252,7 @@ document.addEventListener('click',e=>{
   // equipo
   const bj=t.closest('[data-baja]'); if(bj){ const a=asesores.find(x=>x.id===bj.dataset.baja), n=pipeline.filter(p=>p.asesor===a.id&&!isClosed(p)).length;
     ask('Dar de baja a '+esc(a.name),(n?'Tiene <b>'+n+'</b> prospecto(s) abiertos: se quedan con su nombre hasta que los reasignes (Editar en Seguimiento). ':'')+'Deja de contar para el cover y la meta; su historial se conserva.','Dar de baja',false,()=>{ a.activo=false; a.ausencia=null; saveAsesores(); renderAll(); toast('Baja registrada'); }); return; }
+  const ce=t.closest('[data-cert]'); if(ce){ const a=asesores.find(x=>x.id===ce.dataset.cert); a.cert=true; saveAsesores(); renderAll(); toast('Marcado como certificado'); return; }
   const rc=t.closest('[data-react]'); if(rc){ const a=asesores.find(x=>x.id===rc.dataset.react); a.activo=true; saveAsesores(); renderAll(); toast('Reactivado'); return; }
   const dl=t.closest('[data-del]'); if(dl){ const a=asesores.find(x=>x.id===dl.dataset.del); ask('Eliminar a '+esc(a.name),'Nunca tuvo prospectos; se borra del todo.','Eliminar',false,()=>{ asesores=asesores.filter(x=>x.id!==a.id); saveAsesores(); renderAll(); }); return; }
   const ae=t.closest('[data-aedit]'); if(ae){ editAsesor(asesores.find(x=>x.id===ae.dataset.aedit)); return; }
@@ -1276,6 +1309,7 @@ try{ const rp=new URLSearchParams(location.search).get('region'); if(rp&&rp.trim
 cfgEditing=!(cfg.sucursal||cfg.gerente);
 { const vt=document.getElementById('vtag'); if(vt) vt.textContent='v'+VERSION; }
 renderAll();
+setTimeout(certPopup,600);
 
   /* ===== Buscar actualización (sin romper nada si no hay red) ===== */
   (function(){
@@ -1654,7 +1688,7 @@ $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
-<!-- ===== Modo demostración (v2.15.1): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<!-- ===== Modo demostración (v2.16.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
 <script>
 (function(){
   const HASH='550335ba', BK='demo:backup', P='gerente2:';
@@ -1672,7 +1706,9 @@ idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().sli
       {id:'ad3',name:'Marisol Torres (demo)',fechaAlta:off(-400),fechaNacimiento:null,activo:true,ausencia:null},
       {id:'ad4',name:'Iván Sandoval (demo)',fechaAlta:off(-250),fechaNacimiento:null,activo:true,ausencia:'incapacidad',dias:7,desdeAus:off(-3),regreso:off(4)},
       {id:'ad5',name:'Daniela Cruz (demo)',fechaAlta:off(-120),fechaNacimiento:null,activo:true,ausencia:'vacaciones',desdeAus:off(-1)},
-      {id:'ad6',name:'Ernesto Villa (demo)',fechaAlta:off(-5),fechaNacimiento:null,activo:true,ausencia:null}
+      {id:'ad6',name:'Ernesto Villa (demo)',fechaAlta:off(-5),fechaNacimiento:null,activo:true,ausencia:null},
+      {id:'ad7',name:'Pedro Núñez (gestor demo)',fechaAlta:off(-700),fechaNacimiento:null,activo:true,ausencia:null,gestor:true},
+      {id:'ad8',name:'Andrea Lomelí (demo)',fechaAlta:off(-80),fechaNacimiento:null,activo:true,ausencia:'permiso',desdeAus:off(0),dias:2,regreso:off(2)}
     ];
     const mk=(id,name,monto,asesor,tipo,h,extra)=>Object.assign({id,name,monto,asesor,tipo,h,notas:[],log:[{ts:new Date().toISOString(),txt:'Creado (demo)'}]},extra||{});
     const pip=[
