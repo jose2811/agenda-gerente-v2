@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.16.1 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.16.2 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.16.1';
+const VERSION='2.16.2';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1587,6 +1587,8 @@ function draw(){
     h+='<div class="rcard" style="overflow:auto"><b>Meses anteriores — % de renovación por oficina</b><div class="rsub">Con el estatus de hoy de cada vencimiento (clic en el mes para verlo completo).</div><table><tr><th>Mes</th>'+sk.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th>Región</th></tr>'+ms.map(m=>{ const x=analyze(m); return '<tr><td><a href="#" data-gm="'+m+'">'+mname(m)+'</a></td>'+sk.map(k=>{const s=x.sucs[k];return '<td>'+(s?pf(pct(s.ren,s.base)):'—')+'</td>';}).join('')+'<td class="rp">'+pf(pct(x.tot.ren,x.tot.base))+'</td></tr>'; }).join('')+'</table></div>'; }
   const ck=cortes[view.month]; if(ck&&Object.keys(ck).length){ const wk=d=>{ const x=new Date(d+'T12:00:00Z'); const dow=(x.getUTCDay()+6)%7; x.setUTCDate(x.getUTCDate()-dow); return x.toISOString().slice(0,10); }, byW={}; Object.keys(ck).sort().forEach(d=>{ byW[wk(d)]=d; }); const ds=Object.values(byW).sort().slice(-8); h+='<div class="rcard"><b>Cortes (cada vez que subes cartera)</b><table><tr><th>Fecha</th>'+Object.keys(A.sucs).sort().map(k=>'<th>'+esc(k)+'</th>').join('')+'<th>Región</th></tr>'+ds.map(d=>'<tr><td>'+fdate(d)+'</td>'+Object.keys(A.sucs).sort().map(k=>{const x=ck[d][k];return '<td>'+(x?pf(pct(x.r,x.b)):'—')+'</td>';}).join('')+'<td class="rp">'+pf(pct(ck[d]['*'].r,ck[d]['*'].b))+'</td></tr>').join('')+'</table><div class="rsub">Se guarda el % de cada carga; aquí se muestra el último corte de cada semana (lunes a sábado), así no se llena aunque cargues a diario.</div></div>'; }
   const cnt=k=>k==='leg'?A.leg.filter(i=>(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:k==='arr'?A.arr.filter(i=>!i.renew&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:A.items.filter(i=>hit(i,k)&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length;
+  { const nb=A.items.filter(i=>hit(i,'no')&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)), cm=x=>nb.filter(i=>(marks[i.id]||{}).mot===x).length, nm=cm('Rechazado por mesa'), na=cm('Rechazado desde Approval');
+    h+='<div class="rbar"><span class="rsub">🏢 <b>Rechazo desde casa</b>:</span><button class="b'+(view.filter==='no'&&view.mot==='Rechazado por mesa'?' on':'')+'" data-rej="Rechazado por mesa">Por mesa · '+nm+'</button><button class="b'+(view.filter==='no'&&view.mot==='Rechazado desde Approval'?' on':'')+'" data-rej="Rechazado desde Approval">Por Approval · '+na+'</button><span class="rsub">'+(nb.length?'= <b>'+(nm+na)+'</b> de '+nb.length+' que no renuevan ('+Math.round((nm+na)/nb.length*100)+'%)':'sin cuentas en No renueva')+'</span></div>'; }
   h+='<div class="rbar">'+[['por','Por renovar'],['cp','Comprometidos'],['cv','⏰ Compromiso vencido'],['seg','👀 En seguimiento'],['arr','↪ Arrastre de meses anteriores'],['leg','⚖️ En legal (no cuentan)'],['vis','🚶 Visitas pendientes'],['lnr','Liquidó sin renovar'],['no','No renueva'],['pt','Pendientes (total)'],['ren','Renovados'],['adel','Adelantados'],['todos','Todos']].map(([k,l])=>'<button class="b'+(view.filter===k?' on':'')+'" data-f="'+k+'">'+l+' · '+cnt(k)+'</button>').join('')+'</div>';
   if(view.filter==='no'){ const cm={}; A.items.filter(i=>hit(i,'no')&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).forEach(i=>{ const k=(marks[i.id]||{}).mot||'(sin motivo)'; cm[k]=(cm[k]||0)+1; });
     h+='<div class="rbar"><select class="in" data-a="mot"><option value="">Todos los motivos</option>'+Object.keys(cm).sort((a,b)=>cm[b]-cm[a]).map(k=>'<option value="'+esc(k==='(sin motivo)'?'':k)+'"'+(view.mot===k?' selected':'')+'>'+esc(k)+' ('+cm[k]+')</option>').join('')+'</select></div>'; }
@@ -1668,6 +1670,7 @@ document.addEventListener('click',e=>{
   const of=t.closest('[data-off]'); if(of&&view.pick){ const p=view.pick; finish(p.rows,p.name,[of.dataset.off]); return; }
   const ex=t.closest('[data-exp]'); if(ex){ doExport(ex.dataset.exp); return; }
   const gm=t.closest('[data-gm]'); if(gm){ e.preventDefault(); view.month=gm.dataset.gm; draw(); $('#rnvPanel').scrollTop=0; return; }
+  const rj=t.closest('[data-rej]'); if(rj){ view.filter='no'; view.mot=rj.dataset.rej; draw(); return; }
   const f=t.closest('[data-f]'); if(f){ view.filter=f.dataset.f; draw(); return; }
   const no=t.closest('[data-no]'); if(no){ const id=no.dataset.no, m=marks[id]=marks[id]||{}; if(!m.no&&!m.mot){ view.msg='Primero elige el motivo.'; } else m.no=!m.no; save(); draw(); return; }
   const cb=t.closest('[data-cmb]'); if(cb){ const id=cb.dataset.cmb, inp=document.querySelector('[data-cm="'+id+'"]'), x=inp&&inp.value.trim(); if(x){ const m=marks[id]=marks[id]||{}; (m.com=m.com||[]).push({d:today(),x,a:AUTOR}); m.ts=Date.now(); view.flash=id; save(); draw(); } return; }
@@ -1688,7 +1691,7 @@ $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
-<!-- ===== Modo demostración (v2.16.1): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<!-- ===== Modo demostración (v2.16.2): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
 <script>
 (function(){
   const HASH='550335ba', BK='demo:backup', P='gerente2:';
