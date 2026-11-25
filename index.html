@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.17.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.18.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.17.0';
+const VERSION='2.18.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -810,6 +810,7 @@ function card(p){
     +'<div class="pmeta"><span class="pill '+cls+'">'+st+'</span><span>'+esc(asesorName(p.asesor))+'</span><span>· '+esc(TIPOS[p.tipo]||'Nuevo')+'</span>'+(!cl&&stTxt(p)?'<span class="age a-'+lvl(p)+'">'+stTxt(p)+'</span>':'')+'</div>'
     +'<div class="hitos">'+HK.map(btn).join('')+'</div>'
     +'<div class="pfoot"><button type="button" class="pin '+(p.h.pin?'on':'')+'" data-pin="'+p.id+'" '+(cl?'disabled':'')+'>📌 Se desembolsa hoy</button>'+(stageOf(p)==='Por enviar'?'<button type="button" class="pin '+(isDif(p)?'on':'')+'" data-dif="'+p.id+'">⏸ '+(isDif(p)?'Aplazado hoy · volver a incluir':'No sube hoy')+'</button>':'')+(stageOf(p)==='Por firmar'?'<button type="button" class="pin" data-aut="'+p.id+'">💲 Monto autorizado</button>':'')+'<button type="button" class="pin" data-nota="'+p.id+'">📝 Nota</button><button type="button" class="pin" data-edit="'+p.id+'">✏️ Editar</button></div>'
+    +(!cl?'<div class="sub" style="margin:6px 0 0"><label>📅 Fecha estimada de desembolso <span style="opacity:.7">(opcional, si no sale hoy ni mañana)</span> <input type="date" data-fest="'+p.id+'" value="'+(p.fechaEst||'')+'" min="'+todayStr()+'" style="font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:8px"></label></div>':'')
     +(lastN?'<div class="nota">📝 '+esc(lastN.x)+' <span class="d">('+fd(lastN.d)+')</span>'+(olderN.length?'<details class="hist"><summary>'+olderN.length+' nota(s) anterior(es)</summary>'+olderN.map(n=>'<div>'+fd(n.d)+' · '+esc(n.x)+'</div>').join('')+'</details>':'')+'</div>':'')
     +(p.motivo&&p.h.re?'<div class="motivo">Motivo: '+esc(p.motivo)+'</div>':'')
     +(log.length?'<details class="hist"><summary>Historial</summary>'+log.map(l=>'<div>'+fd(l.ts.slice(0,10))+' · '+esc(l.txt)+'</div>').join('')+'</details>':'')
@@ -1284,6 +1285,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.id==='fecha'){ fecha=t.value||todayStr(); renderAll(); return; }
+  if(t.dataset&&t.dataset.fest){ const p=byId(t.dataset.fest); if(p){ if(t.value){ p.fechaEst=t.value; plog(p,'Fecha estimada de desembolso: '+fd(t.value)); } else { delete p.fechaEst; plog(p,'Quitó la fecha estimada de desembolso'); } savePipeline(); renderAll(); toast(t.value?'Fecha estimada guardada: '+fd(t.value):'Fecha estimada quitada'); } return; }
   if(t.id==='fAsesor'){ fAs=t.value; renderSeg(); return; }
   if(t.id==='sucSel'){
     if(t.value==='__otra__'){ $('#sucOtra').style.display=''; $('#sucOtra').focus(); cfg.sucursal=$('#sucOtra').value.trim(); }
@@ -1715,7 +1717,7 @@ $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
-<!-- ===== Modo demostración (v2.17.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<!-- ===== Modo demostración (v2.18.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
 <script>
 (function(){
   const HASH='550335ba', BK='demo:backup', P='gerente2:';
