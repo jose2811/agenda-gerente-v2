@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.16.2 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.16.3 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.16.2';
+const VERSION='2.16.3';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1670,8 +1670,8 @@ document.addEventListener('click',e=>{
   const of=t.closest('[data-off]'); if(of&&view.pick){ const p=view.pick; finish(p.rows,p.name,[of.dataset.off]); return; }
   const ex=t.closest('[data-exp]'); if(ex){ doExport(ex.dataset.exp); return; }
   const gm=t.closest('[data-gm]'); if(gm){ e.preventDefault(); view.month=gm.dataset.gm; draw(); $('#rnvPanel').scrollTop=0; return; }
-  const rj=t.closest('[data-rej]'); if(rj){ view.filter='no'; view.mot=rj.dataset.rej; draw(); return; }
-  const f=t.closest('[data-f]'); if(f){ view.filter=f.dataset.f; draw(); return; }
+  const rj=t.closest('[data-rej]'); if(rj){ view.mot=(view.filter==='no'&&view.mot===rj.dataset.rej)?'':rj.dataset.rej; view.filter='no'; draw(); return; }
+  const f=t.closest('[data-f]'); if(f){ view.filter=f.dataset.f; view.mot=''; draw(); return; }
   const no=t.closest('[data-no]'); if(no){ const id=no.dataset.no, m=marks[id]=marks[id]||{}; if(!m.no&&!m.mot){ view.msg='Primero elige el motivo.'; } else m.no=!m.no; save(); draw(); return; }
   const cb=t.closest('[data-cmb]'); if(cb){ const id=cb.dataset.cmb, inp=document.querySelector('[data-cm="'+id+'"]'), x=inp&&inp.value.trim(); if(x){ const m=marks[id]=marks[id]||{}; (m.com=m.com||[]).push({d:today(),x,a:AUTOR}); m.ts=Date.now(); view.flash=id; save(); draw(); } return; }
   if(t.closest('[data-stop]')) return;
@@ -1691,7 +1691,7 @@ $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
-<!-- ===== Modo demostración (v2.16.2): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<!-- ===== Modo demostración (v2.16.3): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
 <script>
 (function(){
   const HASH='550335ba', BK='demo:backup', P='gerente2:';
