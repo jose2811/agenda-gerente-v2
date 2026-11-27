@@ -363,7 +363,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
     </div>
   </details>
 
-  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.18.0 —</div>
+  <div class="footer">— created by <b>Joe Fdz &amp; Claude !!</b> · v2.19.0 —</div>
 </div>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -373,7 +373,7 @@ details.hist div{font-size:11.5px;color:var(--muted);margin-top:3px}
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const VERSION='2.18.0';
+const VERSION='2.19.0';
 const PFX='gerente2:';
 
 /* ---------- candado de acceso (una vez por aparato) ---------- */
@@ -1530,7 +1530,7 @@ function analyze(month){
 
 /* ---------- LNR: liquidó sin renovar en los últimos 3 meses completos (ago-sep-oct si hoy es noviembre) ---------- */
 const mAdd=(ym,n)=>{ const a=ym.split('-').map(Number); return new Date(Date.UTC(a[0],a[1]-1+n,1)).toISOString().slice(0,7); };
-const LSUB={sin:'Sin gestión',cp:'Comprometidos',seg:'En seguimiento',no:'No renueva'};
+const LSUB={sin:'Sin gestión',cp:'Comprometidos',seg:'En seguimiento',no:'No renueva',cv:'⏰ Compromiso vencido'};
 function lnrWin(){ const cm=today().slice(0,7), n=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'], a=mAdd(cm,-3), b=mAdd(cm,-1); return n[+a.slice(5)-1]+'–'+n[+b.slice(5)-1]+' '+b.slice(0,4); }
 function lnrItems(){
   if(!cart) return [];
@@ -1545,8 +1545,26 @@ function lnrItems(){
   });
   return out;
 }
+function lnrDash(){
+  const all=lnrItems(); let h='';
+  if(!all.length) return '<div class="rcard"><b>🎯 LNR ('+lnrWin()+')</b><div class="rsub">No hay cuentas liquidadas sin renovar en esta ventana.</div></div>';
+  const st=a=>({n:a.length,sin:a.filter(i=>!i.g).length,cp:a.filter(i=>i.cp).length,seg:a.filter(i=>SEG.includes(i.g)).length,no:a.filter(i=>i.g==='no').length,cv:a.filter(i=>i.cvenc).length,mo:a.reduce((t,i)=>t+(i.mo||0),0)});
+  const T=st(all), ges=T.n-T.sin, rec=all.filter(i=>(i.hist||[]).length>1).length;
+  h+='<div class="rcard"><div class="big"><div><div class="n">'+T.n+'</div><div class="l">Clientes que liquidaron y no han renovado<br>('+lnrWin()+')</div></div><div><div class="n" style="font-size:26px">'+pf(pct(ges,T.n))+'</div><div class="l">Con gestión<br>('+ges+' de '+T.n+' · '+T.sin+' sin tocar)</div></div><div class="l">Monto del último crédito: <b>'+money(T.mo)+'</b><br>Comprometidos: <b>'+T.cp+'</b> · En seguimiento: <b>'+T.seg+'</b> · No renuevan: <b>'+T.no+'</b></div></div></div>';
+  if(T.cv) h+='<div class="rcard" style="border-color:#c0392b;background:#fdf0ee"><b style="color:#c0392b">⏰ '+T.cv+' compromiso(s) vencido(s) — volver a preguntar</b> <button class="b" data-ls="cv">Ver cuáles</button></div>';
+  h+='<div class="rbar"><button class="b'+(view.by==='suc'?' on':'')+'" data-by="suc">Por oficina / gerente</button><button class="b'+(view.by==='as'?' on':'')+'" data-by="as">Por asesor</button></div>';
+  const G={}; all.forEach(i=>{ const k=view.by==='as'?(i.as||'(sin asesor)'):i.suc; (G[k]=G[k]||{suc:i.suc,a:[]}).a.push(i); });
+  const c=(sub,k,n,sty)=>'<td class="rp"'+(sty?' style="'+sty+'"':'')+'>'+(n?'<a href="#" class="dl" data-lr="'+sub+'" data-k="'+esc(k)+'">'+n+'</a>':n)+'</td>';
+  const row=(lab,k,x)=>'<td>'+lab+'</td>'+c('',k,x.n)+c('sin',k,x.sin,x.sin?'color:#c0392b':'')+c('cp',k,x.cp)+c('seg',k,x.seg)+c('no',k,x.no,'color:#8a93a0')+'<td class="rp">'+pf(pct(x.n-x.sin,x.n))+'</td><td>'+(x.cv?'<a href="#" class="dl warn" data-lr="cv" data-k="'+esc(k)+'">⏰'+x.cv+'</a>':'')+'</td><td>'+money(x.mo)+'</td>';
+  h+='<div class="rcard" style="overflow:auto"><table><tr><th>'+(view.by==='as'?'Asesor':'Oficina / gerente')+'</th><th title="Liquidaron y no han renovado">LNR</th><th title="Sin ninguna gestión marcada: los que hay que trabajar primero" style="color:#c0392b">Sin gestión</th><th title="Renueva en tiempo / Sí renueva">Comprom.</th><th title="Se visita / Se quiere esperar / Renueva el próximo mes">Seguim.</th><th title="Ya descartados">No renueva</th><th title="% con alguna gestión (todo menos Sin gestión)">% gestión</th><th title="Compromisos con fecha ya vencida">Vencidos</th><th>Monto</th></tr>'
+   +Object.keys(G).sort().map(k=>{ const ge=view.by==='suc'?gerOf(k):''; return '<tr>'+row(esc(k)+(view.by==='as'?' <span class="rsub">'+esc(G[k].suc)+'</span>':'')+(ge?'<div class="rsub">'+esc(ge)+'</div>':''),k,st(G[k].a))+'</tr>'; }).join('')
+   +'<tr>'+row('<b>'+(GER?'Total oficina':'Región')+'</b>','',T)+'</tr></table><div class="rsub" style="margin-top:6px">Meta práctica: bajar <b>Sin gestión</b> a 0 — que cada cliente quede como Comprometido, En seguimiento o No renueva (con motivo). Toca un número para ver esos clientes.</div></div>';
+  const mes={}; all.forEach(i=>{ const k=(i.liq||'').slice(0,7); (mes[k]=mes[k]||[]).push(i); });
+  h+='<div class="rcard"><b>Por mes en que liquidaron</b><table><tr><th>Mes</th><th>LNR</th><th>Sin gestión</th><th>% gestión</th></tr>'+Object.keys(mes).sort().map(k=>{ const x=st(mes[k]); return '<tr><td>'+mname(k)+'</td><td class="rp">'+x.n+'</td><td>'+x.sin+'</td><td>'+pf(pct(x.n-x.sin,x.n))+'</td></tr>'; }).join('')+'</table><div class="rsub">Los más viejos son los que más se enfrían: ahí conviene empezar.</div></div>';
+  return h;
+}
 const srcOf=A=>view.filter==='arr'?A.arr:view.filter==='leg'?A.leg:view.filter==='lnr3'?lnrItems():A.items;
-const lsubOk=i=>{ if(view.filter!=='lnr3'||!view.lsub) return true; const x=view.lsub; return x==='sin'?!i.g:x==='cp'?i.cp:x==='seg'?SEG.includes(i.g):x==='no'?i.g==='no':true; };
+const lsubOk=i=>{ if(view.filter!=='lnr3'||!view.lsub) return true; const x=view.lsub; return x==='sin'?!i.g:x==='cp'?i.cp:x==='seg'?SEG.includes(i.g):x==='no'?i.g==='no':x==='cv'?i.cvenc:true; };
 
 /* ---------- pantalla ---------- */
 const Z0=()=>({base:0,ren:0,adel:0,pt:0,lnr:0,no:0,por:0,cp:0,cv:0});
@@ -1592,6 +1610,7 @@ function draw(){
   if(view.map){ h+='<div class="rcard"><b>No encontré estas columnas:</b><div class="rsub">Elige cuál del archivo corresponde. Se guarda y no te lo vuelvo a pedir.</div>'; view.map.missing.forEach(f=>{ h+='<div class="rbar"><span style="min-width:140px">'+esc(FIELDS[f][0])+'</span><select class="in" data-map="'+f+'"><option value="">— elegir —</option>'+view.map.heads.map((x,i)=>'<option value="'+i+'">'+esc(x||'(vacía '+(i+1)+')')+'</option>').join('')+'</select></div>'; }); h+='<button class="b pri" data-a="applymap">Aplicar</button></div>'; R.innerHTML=h; return; }
   if(!cart){ h+='<div class="rcard">Aún no hay cartera cargada.</div>'; R.innerHTML=h; return; }
   const months=monthsList(); const A=analyze(view.month), T=A.tot;
+  const LN=view.filter==='lnr3'; const hKeep=h; h='';
   h+='<div class="rbar"><label>Vencimientos de <select class="in" data-a="month">'+months.map(m=>'<option value="'+m+'"'+(m===view.month?' selected':'')+'>'+mname(m)+'</option>').join('')+'</select></label></div>';
   const pm=pct(T.ren,T.base), pa=pct(T.ren-T.adel,T.base-T.adel), cR=Object.values(comp[view.month]||{}).reduce((a,b)=>a+(+b||0),0);
   h+='<div class="rcard"><div class="big"><div><div class="n">'+pf(pm)+'</div><div class="l">Renovación del mes<br>('+T.ren+' de '+T.base+' vencimientos · '+T.adel+' adelantados incluidos)</div></div><div><div class="n" style="font-size:26px">'+pf(pa)+'</div><div class="l">Avance sobre lo pendiente<br>('+(T.ren-T.adel)+' de '+(T.base-T.adel)+' · sin los adelantados)</div></div><div class="l">Monto vencimientos: <b>'+money(T.monto)+'</b>'+(cR?'<br>Compromiso región: <b>'+cR+'</b> renovaciones · real '+T.ren:'')+'</div></div></div>';
@@ -1608,12 +1627,13 @@ function draw(){
   { const cur=today().slice(0,7), ms=months.filter(m=>m<=cur).slice(-8).reverse(), sk=Object.keys(A.sucs).sort();
     h+='<div class="rcard" style="overflow:auto"><b>Meses anteriores — % de renovación por oficina</b><div class="rsub">Con el estatus de hoy de cada vencimiento (clic en el mes para verlo completo).</div><table><tr><th>Mes</th>'+sk.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th>Región</th></tr>'+ms.map(m=>{ const x=analyze(m); return '<tr><td><a href="#" data-gm="'+m+'">'+mname(m)+'</a></td>'+sk.map(k=>{const s=x.sucs[k];return '<td>'+(s?pf(pct(s.ren,s.base)):'—')+'</td>';}).join('')+'<td class="rp">'+pf(pct(x.tot.ren,x.tot.base))+'</td></tr>'; }).join('')+'</table></div>'; }
   const ck=cortes[view.month]; if(ck&&Object.keys(ck).length){ const wk=d=>{ const x=new Date(d+'T12:00:00Z'); const dow=(x.getUTCDay()+6)%7; x.setUTCDate(x.getUTCDate()-dow); return x.toISOString().slice(0,10); }, byW={}; Object.keys(ck).sort().forEach(d=>{ byW[wk(d)]=d; }); const ds=Object.values(byW).sort().slice(-8); h+='<div class="rcard"><b>Cortes (cada vez que subes cartera)</b><table><tr><th>Fecha</th>'+Object.keys(A.sucs).sort().map(k=>'<th>'+esc(k)+'</th>').join('')+'<th>Región</th></tr>'+ds.map(d=>'<tr><td>'+fdate(d)+'</td>'+Object.keys(A.sucs).sort().map(k=>{const x=ck[d][k];return '<td>'+(x?pf(pct(x.r,x.b)):'—')+'</td>';}).join('')+'<td class="rp">'+pf(pct(ck[d]['*'].r,ck[d]['*'].b))+'</td></tr>').join('')+'</table><div class="rsub">Se guarda el % de cada carga; aquí se muestra el último corte de cada semana (lunes a sábado), así no se llena aunque cargues a diario.</div></div>'; }
+  h = LN ? hKeep+lnrDash() : hKeep+h;
   const cnt=k=>k==='lnr3'?lnrItems().filter(i=>(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:k==='leg'?A.leg.filter(i=>(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:k==='arr'?A.arr.filter(i=>!i.renew&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length:A.items.filter(i=>hit(i,k)&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).length;
-  { const nb=A.items.filter(i=>hit(i,'no')&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)), cm=x=>nb.filter(i=>(marks[i.id]||{}).mot===x).length, nm=cm('Rechazado por mesa'), na=cm('Rechazado desde Approval');
+  if(!LN){ const nb=A.items.filter(i=>hit(i,'no')&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)), cm=x=>nb.filter(i=>(marks[i.id]||{}).mot===x).length, nm=cm('Rechazado por mesa'), na=cm('Rechazado desde Approval');
     h+='<div class="rbar"><span class="rsub">🏢 <b>Rechazo desde casa</b>:</span><button class="b'+(view.filter==='no'&&view.mot==='Rechazado por mesa'?' on':'')+'" data-rej="Rechazado por mesa">Por mesa · '+nm+'</button><button class="b'+(view.filter==='no'&&view.mot==='Rechazado desde Approval'?' on':'')+'" data-rej="Rechazado desde Approval">Por Approval · '+na+'</button><span class="rsub">'+(nb.length?'= <b>'+(nm+na)+'</b> de '+nb.length+' que no renuevan ('+Math.round((nm+na)/nb.length*100)+'%)':'sin cuentas en No renueva')+'</span></div>'; }
   h+='<div class="rbar">'+[['por','Por renovar'],['cp','Comprometidos'],['cv','⏰ Compromiso vencido'],['seg','👀 En seguimiento'],['arr','↪ Arrastre de meses anteriores'],['leg','⚖️ En legal (no cuentan)'],['vis','🚶 Visitas pendientes'],['lnr','Liquidó sin renovar'],['lnr3','🎯 LNR ('+lnrWin()+')'],['no','No renueva'],['pt','Pendientes (total)'],['ren','Renovados'],['adel','Adelantados'],['todos','Todos']].map(([k,l])=>'<button class="b'+(view.filter===k?' on':'')+'" data-f="'+k+'">'+l+' · '+cnt(k)+'</button>').join('')+'</div>';
-  if(view.filter==='lnr3'){ const nb=lnrItems().filter(i=>(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)), c={'':nb.length,sin:nb.filter(i=>!i.g).length,cp:nb.filter(i=>i.cp).length,seg:nb.filter(i=>SEG.includes(i.g)).length,no:nb.filter(i=>i.g==='no').length};
-    h+='<div class="rbar"><span class="rsub">🎯 Liquidaron y no han renovado ('+lnrWin()+'):</span>'+[['','Todos'],['sin','Sin gestión'],['cp','Comprometidos'],['seg','En seguimiento'],['no','No renueva']].map(([k,l])=>'<button class="b'+((view.lsub||'')===k?' on':'')+'" data-ls="'+k+'">'+l+' · '+c[k]+'</button>').join('')+'</div>'; }
+  if(view.filter==='lnr3'){ const nb=lnrItems().filter(i=>(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)), c={'':nb.length,sin:nb.filter(i=>!i.g).length,cp:nb.filter(i=>i.cp).length,seg:nb.filter(i=>SEG.includes(i.g)).length,no:nb.filter(i=>i.g==='no').length,cv:nb.filter(i=>i.cvenc).length};
+    h+='<div class="rbar"><span class="rsub">🎯 Liquidaron y no han renovado ('+lnrWin()+'):</span>'+[['','Todos'],['sin','Sin gestión'],['cp','Comprometidos'],['cv','⏰ Vencidos'],['seg','En seguimiento'],['no','No renueva']].map(([k,l])=>'<button class="b'+((view.lsub||'')===k?' on':'')+'" data-ls="'+k+'">'+l+' · '+c[k]+'</button>').join('')+'</div>'; }
   if(view.filter==='no'){ const cm={}; A.items.filter(i=>hit(i,'no')&&(!view.suc||i.suc===view.suc)&&(!view.as||i.as===view.as)).forEach(i=>{ const k=(marks[i.id]||{}).mot||'(sin motivo)'; cm[k]=(cm[k]||0)+1; });
     h+='<div class="rbar"><select class="in" data-a="mot"><option value="">Todos los motivos</option>'+Object.keys(cm).sort((a,b)=>cm[b]-cm[a]).map(k=>'<option value="'+esc(k==='(sin motivo)'?'':k)+'"'+(view.mot===k?' selected':'')+'>'+esc(k)+' ('+cm[k]+')</option>').join('')+'</select></div>'; }
   h+='<div class="rbar">'+(GER?'':'<select class="in" data-a="suc"><option value="">Todas las oficinas</option>'+Object.keys(A.sucs).sort().map(k=>'<option'+(view.suc===k?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>')+'<input class="in" style="flex:1;min-width:150px" placeholder="🔎 Buscar cliente o ID" value="'+esc(view.q)+'" data-a="q"></div>';
@@ -1689,6 +1709,7 @@ document.addEventListener('click',e=>{
     else if(k==='copylist'){ copyList(); }
     else if(k==='del'){ if(confirm('¿Borrar la cartera cargada de este navegador? Tus motivos y comentarios se conservan.')){ idbDel('cartera'); cart=null; view.msg='Cartera borrada.'; draw(); } }
     else if(k==='applymap'){ const pend={}; document.querySelectorAll('[data-map]').forEach(s=>{ if(s.value!=='') pend[s.dataset.map]=s.value; }); const r=parseAOA(view.map.aoa,pend); if(r.missing){ view.msg='Aún faltan columnas.'; draw(); return; } const nm=view.map.name; finish(r.rows,nm); } return; }
+  const lr=t.closest('[data-lr]'); if(lr){ e.preventDefault(); const k=lr.dataset.k; view.filter='lnr3'; view.lsub=lr.dataset.lr; view.mot=''; if(view.by==='as'){ view.as=k; view.suc=''; } else { view.suc=k; view.as=''; } view.open=null; draw(); const l=document.getElementById('rnvList'); if(l) l.scrollIntoView({behavior:'smooth',block:'start'}); return; }
   const dr=t.closest('[data-dr]'); if(dr){ e.preventDefault(); const k=dr.dataset.k; view.filter=dr.dataset.dr; if(view.by==='as'){ view.as=k; view.suc=''; } else { view.suc=k; view.as=''; } view.open=null; draw(); const l=document.getElementById('rnvList'); if(l) l.scrollIntoView({behavior:'smooth',block:'start'}); return; }
   if(t.closest('[data-clras]')){ e.preventDefault(); view.as=''; draw(); return; }
   const by=t.closest('[data-by]'); if(by){ view.by=by.dataset.by; draw(); return; }
@@ -1717,7 +1738,7 @@ $('#rnvFile').addEventListener('change',e=>{ const f=e.target.files[0]; e.target
 idbGet('cartera').then(c=>{ if(c){ cart=c; const m=monthsList(), mes=today().slice(0,7); view.month=m.includes(mes)?mes:(m[m.length-1]||mes); } }).catch(()=>{});
 })();
 </script>
-<!-- ===== Modo demostración (v2.18.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
+<!-- ===== Modo demostración (v2.19.0): oficina ficticia protegida con clave. Toca 5 veces el pie de página. ===== -->
 <script>
 (function(){
   const HASH='550335ba', BK='demo:backup', P='gerente2:';
